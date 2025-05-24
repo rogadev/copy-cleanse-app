@@ -40,7 +40,6 @@ const EM_DASH_REGEX = /—/g;
 export function cleanText(text: string): CleaningResult {
   const changes: TextChange[] = [];
   let cleaned = text;
-  let offset = 0;
 
   // First, find all em dashes
   const emDashMatches = [...text.matchAll(EM_DASH_REGEX)];

@@ -1,38 +1,116 @@
-# sv
+# AI Text Cleaner
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Remove hidden markers and formatting inconsistencies from AI-generated text with this privacy-first, browser-based tool.
 
-## Creating a project
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-clean.roga.dev-blue?style=for-the-badge)](https://clean.roga.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Built with SvelteKit](https://img.shields.io/badge/Built%20with-SvelteKit-orange?style=for-the-badge)](https://kit.svelte.dev/)
 
-If you're seeing this, you've probably already done this step. Congrats!
+## 🎯 What it does
+
+AI Text Cleaner detects and removes:
+
+- Hidden whitespace characters (zero-width spaces, non-breaking spaces)
+- Em dashes (—) that may identify AI-generated content
+- Various Unicode spacing characters used as markers
+- Invisible formatting inconsistencies
+
+## ✨ Features
+
+- **🚀 Lightning Fast**: Instant processing with real-time feedback
+- **🔒 100% Private**: All processing happens in your browser - no data leaves your device
+- **🎯 Precision Detection**: Advanced algorithms detect even subtle hidden markers
+- **📱 Responsive Design**: Works beautifully on desktop and mobile
+- **🎨 Modern UI**: Built with Tailwind CSS and Svelte 5
+
+## 🚀 Quick Start
+
+### Development Setup
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/rogadev/clean.roga.dev.git
+   cd clean.roga.dev
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   pnpm install
+   # or npm install
+   # or yarn install
+   ```
+
+3. **Start the development server**
+
+   ```bash
+   pnpm dev
+   # or npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to `http://localhost:5173`
+
+### Building for Production
 
 ```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+pnpm build
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Preview the production build:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm preview
 ```
 
-## Building
+## 🛠️ Tech Stack
 
-To create a production version of your app:
+- **Framework**: [SvelteKit](https://kit.svelte.dev/) with Svelte 5
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **TypeScript**: Full type safety
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Deployment**: Static site (works on any hosting platform)
 
-```bash
-npm run build
-```
+## 🤝 Contributing
 
-You can preview the production build with `npm run preview`.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+### Quick Contributing Steps
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 🐛 Reporting Issues
+
+Found a bug? Please [open an issue](https://github.com/rogadev/clean.roga.dev/issues) with:
+
+- A clear description of the problem
+- Steps to reproduce
+- Expected vs actual behavior
+- Browser and OS information
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with love for content creators who want clean, marker-free text
+- Inspired by the need for privacy-first text processing tools
+- Thanks to the open source community for the amazing tools that made this possible
+
+## 📞 Support
+
+- 🌐 **Website**: [clean.roga.dev](https://clean.roga.dev)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/rogadev/clean.roga.dev/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/rogadev/clean.roga.dev/discussions)
+
+---
+
+<div align="center">
+Made with ❤️ for the open source community
+</div>
