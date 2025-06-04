@@ -70,7 +70,7 @@
 	/>
 </svelte:head>
 
-<svelte:window on:paste={handlePaste} />
+<svelte:window onpaste={handlePaste} />
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 	<!-- Navigation/Header Bar -->
@@ -182,9 +182,9 @@
 							<h2 class="text-lg font-semibold text-gray-900">Input Text</h2>
 						</div>
 						{#if inputCollapsed}
-							<button class="text-sm text-blue-600" on:click={() => (inputCollapsed = false)}
-								>Expand</button
-							>
+							<button class="text-sm text-blue-600" onclick={() => (inputCollapsed = false)}>
+								Expand
+							</button>
 						{/if}
 					</div>
 
@@ -285,7 +285,7 @@ This tool analyzes your text for:
 							{#if cleaningResult}
 								<button
 									class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
-									on:click={() => (showResults = !showResults)}
+									onclick={() => (showResults = !showResults)}
 								>
 									{showResults ? 'Hide Cleaning Results' : 'Show Cleaning Results'}
 								</button>
@@ -345,9 +345,9 @@ This tool analyzes your text for:
 										{/if}
 									</div>
 								</div>
-								<button class="text-sm text-blue-600" on:click={() => (showResults = false)}
-									>Hide</button
-								>
+								<button class="text-sm text-blue-600" onclick={() => (showResults = false)}>
+									Hide
+								</button>
 							</div>
 
 							<div class="p-6">
@@ -412,7 +412,7 @@ This tool analyzes your text for:
 
 								{#if hasChanges}
 									<button
-										on:click={() => (showDiff = !showDiff)}
+										onclick={() => (showDiff = !showDiff)}
 										class="mb-4 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
 									>
 										{showDiff ? 'Hide Changes' : 'View Changes'}
@@ -421,7 +421,7 @@ This tool analyzes your text for:
 
 								<div class="mt-4 flex items-center justify-between">
 									<button
-										on:click={copyCleanText}
+										onclick={copyCleanText}
 										class="group inline-flex items-center rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
 									>
 										{#if copySuccess}
@@ -452,7 +452,7 @@ This tool analyzes your text for:
 										{/if}
 									</button>
 									<button
-										on:click={() => (showResults = false)}
+										onclick={() => (showResults = false)}
 										class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
 										>Hide Results</button
 									>
