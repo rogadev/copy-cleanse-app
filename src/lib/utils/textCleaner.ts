@@ -38,8 +38,8 @@ const SUSPICIOUS_WHITESPACE = [
 const EM_DASH_REGEX = /—/g;
 
 export function cleanText(text: string): CleaningResult {
-        const changes: TextChange[] = [];
-        let cleaned = text;
+	const changes: TextChange[] = [];
+	let cleaned = text;
 
 	// First, find all em dashes
 	const emDashMatches = [...text.matchAll(EM_DASH_REGEX)];
@@ -73,23 +73,23 @@ export function cleanText(text: string): CleaningResult {
 	changes.sort((a, b) => a.start - b.start);
 
 	// Apply changes from end to beginning to maintain correct indices
-        for (let i = changes.length - 1; i >= 0; i--) {
-                const change = changes[i];
-                cleaned = cleaned.slice(0, change.start) + change.replacement + cleaned.slice(change.end);
-        }
+	for (let i = changes.length - 1; i >= 0; i--) {
+		const change = changes[i];
+		cleaned = cleaned.slice(0, change.start) + change.replacement + cleaned.slice(change.end);
+	}
 
-       // Remove extra newlines at the end of the text
-       const newlineMatch = cleaned.match(/[\r\n]+$/);
-       if (newlineMatch) {
-               changes.push({
-                       start: cleaned.length - newlineMatch[0].length,
-                       end: cleaned.length,
-                       original: newlineMatch[0],
-                       replacement: '',
-                       type: 'whitespace'
-               });
-               cleaned = cleaned.slice(0, cleaned.length - newlineMatch[0].length);
-       }
+	// Remove extra newlines at the end of the text
+	const newlineMatch = cleaned.match(/[\r\n]+$/);
+	if (newlineMatch) {
+		changes.push({
+			start: cleaned.length - newlineMatch[0].length,
+			end: cleaned.length,
+			original: newlineMatch[0],
+			replacement: '',
+			type: 'whitespace'
+		});
+		cleaned = cleaned.slice(0, cleaned.length - newlineMatch[0].length);
+	}
 
 	return {
 		original: text,

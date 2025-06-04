@@ -229,7 +229,7 @@ This tool analyzes your text for:
 									Reset
 								</button>
 								<button
-									onclick={handleClean}
+									onclick={() => handleClean()}
 									disabled={!inputText.trim() || isProcessing}
 									class="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 								>
