@@ -54,6 +54,8 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: moderate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   lighthouse:
     name: Lighthouse CI
@@ -86,6 +88,7 @@ jobs:
           npx --yes @lhci/cli@latest autorun --upload.target=temporary-public-storage
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          CHROME_PATH: $(which google-chrome-stable)
 
   bundle-analysis:
     name: Bundle Analysis
