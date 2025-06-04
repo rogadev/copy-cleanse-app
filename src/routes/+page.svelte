@@ -345,7 +345,13 @@ This tool analyzes your text for:
 										{/if}
 									</div>
 								</div>
-								<button class="text-sm text-blue-600" onclick={() => (showResults = false)}>
+								<button
+									class="text-sm text-blue-600"
+									onclick={() => {
+										showResults = false;
+										showDiff = false;
+									}}
+								>
 									Hide
 								</button>
 							</div>
@@ -452,7 +458,10 @@ This tool analyzes your text for:
 										{/if}
 									</button>
 									<button
-										onclick={() => (showResults = false)}
+										onclick={() => {
+											showResults = false;
+											showDiff = false;
+										}}
 										class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
 										>Hide Results</button
 									>
