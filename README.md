@@ -22,6 +22,8 @@ AI Text Cleaner detects and removes:
 - **🎯 Precision Detection**: Advanced algorithms detect even subtle hidden markers
 - **📱 Responsive Design**: Works beautifully on desktop and mobile
 - **🎨 Modern UI**: Built with Tailwind CSS and Svelte 5
+- **⚡ One-Step Cleaning**: Paste with **Ctrl+V** to instantly clean and copy text to your clipboard
+- **🔍 Diff Review**: Click "View Changes" to compare your original and cleaned text
 
 ## 🚀 Quick Start
 

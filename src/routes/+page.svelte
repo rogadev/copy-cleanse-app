@@ -7,8 +7,9 @@
 	let showInfo = $state(true);
 	let isProcessing = $state(false);
 	let copySuccess = $state(false);
+	let showDiff = $state(false);
 
-	function handleClean() {
+	function handleClean(autoCopy = false) {
 		if (!inputText.trim()) return;
 
 		isProcessing = true;
@@ -16,6 +17,9 @@
 		setTimeout(() => {
 			cleaningResult = cleanText(inputText);
 			isProcessing = false;
+			if (autoCopy) {
+				copyCleanText();
+			}
 		}, 100);
 	}
 
@@ -39,6 +43,15 @@
 		copySuccess = false;
 	}
 
+	function handlePaste(event: ClipboardEvent) {
+		const pasted = event.clipboardData?.getData('text');
+		if (!pasted) return;
+		event.preventDefault();
+		inputText = pasted;
+		handleClean(true);
+		showDiff = false;
+	}
+
 	let changeCount = $derived(cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
 </script>
@@ -50,6 +63,8 @@
 		content="Clean AI-generated text by removing hidden whitespace markers and formatting inconsistencies that identify generated content."
 	/>
 </svelte:head>
+
+<svelte:window on:paste={handlePaste} />
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 	<!-- Navigation/Header Bar -->
@@ -309,7 +324,7 @@ This tool analyzes your text for:
 						</div>
 
 						<div class="p-6">
-							{#if hasChanges}
+							{#if hasChanges && showDiff}
 								<div
 									class="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"
 								>
@@ -325,7 +340,8 @@ This tool analyzes your text for:
 										/>
 									</div>
 								</div>
-							{:else}
+							{/if}
+							{#if !hasChanges}
 								<div
 									class="mb-6 rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4"
 								>
@@ -349,6 +365,15 @@ This tool analyzes your text for:
 										</div>
 									</div>
 								</div>
+							{/if}
+
+							{#if hasChanges}
+								<button
+									onclick={() => (showDiff = !showDiff)}
+									class="mb-4 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
+								>
+									{showDiff ? 'Hide Changes' : 'View Changes'}
+								</button>
 							{/if}
 
 							<button

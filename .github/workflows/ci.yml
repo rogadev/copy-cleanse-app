@@ -130,9 +130,9 @@ jobs:
 
       - name: Preview build
         run: pnpm preview &
-        
+
       - name: Wait for preview to be ready
         run: sleep 5
 
       - name: Test preview (basic smoke test)
-        run: curl -f http://localhost:4173 || echo "Preview server not responding" 
+        run: curl -f http://localhost:4173 || echo "Preview server not responding"
