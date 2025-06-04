@@ -20,6 +20,7 @@
 		setTimeout(async () => {
 			cleaningResult = cleanText(inputText);
 			isProcessing = false;
+			// Automatically copy the cleaned text to the clipboard
 			await copyCleanText();
 			inputCollapsed = true;
 			showResults = false;
