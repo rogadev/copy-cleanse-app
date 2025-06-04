@@ -53,7 +53,7 @@
 </script>
 
 <div class="font-mono text-sm leading-relaxed whitespace-pre-wrap">
-	{#each segments as segment}
+	{#each segments as segment, i (i)}
 		{#if segment.isChange && segment.change}
 			<span
 				class="group relative inline-block {segment.change.type === 'whitespace'

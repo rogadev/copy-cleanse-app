@@ -118,4 +118,4 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           # This would analyze bundle size changes in PRs
-          echo "Bundle size analysis would be posted as PR comment" 
+          echo "Bundle size analysis would be posted as PR comment"

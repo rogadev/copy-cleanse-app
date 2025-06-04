@@ -47,8 +47,8 @@ jobs:
           body: |
             ## 🚀 Deployment
             This release has been automatically deployed to [clean.roga.dev](https://clean.roga.dev) via Vercel.
-            
+
             ## 📋 Changes
             See the full changelog below.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
