@@ -140,7 +140,13 @@
 						</div>
 						<div class="flex items-center space-x-2">
 							<div class="h-2 w-2 rounded-full bg-purple-500"></div>
-							<span class="text-gray-600">Open Source</span>
+							<a
+								href="https://github.com/rogadev/clean.roga.dev"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-gray-600 hover:text-purple-600 transition-colors duration-200"
+								>Open Source</a
+							>
 						</div>
 					</div>
 				</div>
@@ -670,8 +676,12 @@ This tool analyzes your text for:
 		<footer class="mt-24 border-t border-white/20 pt-12 text-center">
 			<div class="mx-auto max-w-3xl">
 				<p class="text-sm text-gray-500">
-					Built to help identify and remove AI-generated text markers • Open source • Made with ❤️
-					for content creators
+					Built to help identify and remove AI-generated text markers • <a
+						href="https://github.com/rogadev/clean.roga.dev"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="hover:text-blue-600 transition-colors duration-200">Open source</a
+					> • Made with ❤️ for content creators
 				</p>
 				<div class="mt-4 flex justify-center space-x-6 text-sm text-gray-400">
 					<span class="flex items-center space-x-1">
@@ -694,7 +704,12 @@ This tool analyzes your text for:
 						</svg>
 						<span>No downloads required</span>
 					</span>
-					<span class="flex items-center space-x-1">
+					<a
+						href="https://github.com/rogadev/clean.roga.dev"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex items-center space-x-1 hover:text-blue-400 transition-colors duration-200"
+					>
 						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 							<path
 								fill-rule="evenodd"
@@ -703,7 +718,7 @@ This tool analyzes your text for:
 							/>
 						</svg>
 						<span>Open source</span>
-					</span>
+					</a>
 				</div>
 			</div>
 		</footer>
