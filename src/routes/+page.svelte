@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cleanText, type CleaningResult } from '$lib/utils/textCleaner.js';
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
+	import { slide } from 'svelte/transition';
 
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
@@ -8,18 +9,20 @@
 	let isProcessing = $state(false);
 	let copySuccess = $state(false);
 	let showDiff = $state(false);
+	let inputCollapsed = $state(false);
+	let showResults = $state(false);
 
-	function handleClean(autoCopy = false) {
+	function handleClean() {
 		if (!inputText.trim()) return;
 
 		isProcessing = true;
 		// Small delay to show processing state
-		setTimeout(() => {
+		setTimeout(async () => {
 			cleaningResult = cleanText(inputText);
 			isProcessing = false;
-			if (autoCopy) {
-				copyCleanText();
-			}
+			await copyCleanText();
+			inputCollapsed = true;
+			showResults = false;
 		}, 100);
 	}
 
@@ -41,6 +44,9 @@
 		inputText = '';
 		cleaningResult = null;
 		copySuccess = false;
+		inputCollapsed = false;
+		showResults = false;
+		showDiff = false;
 	}
 
 	function handlePaste(event: ClipboardEvent) {
@@ -48,7 +54,7 @@
 		if (!pasted) return;
 		event.preventDefault();
 		inputText = pasted;
-		handleClean(true);
+		handleClean();
 		showDiff = false;
 	}
 
@@ -148,13 +154,13 @@
 		</div>
 
 		<!-- Main Interface - Prioritized -->
-		<div class="mt-12 grid gap-8 lg:grid-cols-2">
+		<div class="mt-12 space-y-8">
 			<!-- Input Section -->
 			<div class="space-y-6">
 				<div
 					class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
 				>
-					<div class="border-b border-gray-100 px-6 py-4">
+					<div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
 						<div class="flex items-center space-x-3">
 							<div
 								class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100"
@@ -175,107 +181,140 @@
 							</div>
 							<h2 class="text-lg font-semibold text-gray-900">Input Text</h2>
 						</div>
+						{#if inputCollapsed}
+							<button class="text-sm text-blue-600" on:click={() => (inputCollapsed = false)}
+								>Expand</button
+							>
+						{/if}
 					</div>
 
-					<div class="p-6">
-						<label for="input-text" class="mb-3 block text-sm font-medium text-gray-700">
-							Paste your AI-generated text here:
-						</label>
-						<div class="relative">
-							<textarea
-								id="input-text"
-								bind:value={inputText}
-								placeholder="Paste text from ChatGPT, Claude, or other AI tools to detect and remove hidden markers...
+					{#if !inputCollapsed}
+						<div class="p-6" transition:slide>
+							<label for="input-text" class="mb-3 block text-sm font-medium text-gray-700"
+								>Paste your AI-generated text here:</label
+							>
+							<div class="relative">
+								<textarea
+									id="input-text"
+									bind:value={inputText}
+									placeholder="Paste text from ChatGPT, Claude, or other AI tools to detect and remove hidden markers...
 
 This tool analyzes your text for:
 • Hidden whitespace characters
 • Em dashes and formatting markers
 • Unicode spacing characters
 • Invisible formatting inconsistencies"
-								class="block h-64 w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset"
-								style="max-height: 50vh; overflow-y: auto;"
-							></textarea>
-							{#if inputText.length > 0}
-								<div class="absolute top-3 right-3">
-									<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-										{inputText.length} chars
-									</div>
-								</div>
-							{/if}
-						</div>
-
-						<div class="mt-6 flex items-center justify-between">
-							<div class="text-sm text-gray-500">
+									class="block h-64 w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset"
+									style="max-height: 50vh; overflow-y: auto;"
+								></textarea>
 								{#if inputText.length > 0}
-									{inputText.length} characters • {inputText.split('\n').length} lines
-								{:else}
-									Ready to analyze your text
+									<div class="absolute top-3 right-3">
+										<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+											{inputText.length} chars
+										</div>
+									</div>
 								{/if}
 							</div>
-							<div class="flex space-x-3">
-								<button
-									onclick={reset}
-									disabled={!inputText && !cleaningResult}
-									class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-										/>
-									</svg>
-									Reset
-								</button>
-								<button
-									onclick={handleClean}
-									disabled={!inputText.trim() || isProcessing}
-									class="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									{#if isProcessing}
-										<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-											<circle
-												class="opacity-25"
-												cx="12"
-												cy="12"
-												r="10"
-												stroke="currentColor"
-												stroke-width="4"
-											></circle>
-											<path
-												class="opacity-75"
-												fill="currentColor"
-												d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-											></path>
-										</svg>
-										Processing...
+
+							<div class="mt-6 flex items-center justify-between">
+								<div class="text-sm text-gray-500">
+									{#if inputText.length > 0}
+										{inputText.length} characters • {inputText.split('\n').length} lines
 									{:else}
+										Ready to analyze your text
+									{/if}
+								</div>
+								<div class="flex space-x-3">
+									<button
+										onclick={reset}
+										disabled={!inputText && !cleaningResult}
+										class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									>
 										<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
 												stroke-linejoin="round"
 												stroke-width="2"
-												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
 											/>
 										</svg>
-										Clean Text
-									{/if}
-								</button>
+										Reset
+									</button>
+									<button
+										onclick={handleClean}
+										disabled={!inputText.trim() || isProcessing}
+										class="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										{#if isProcessing}
+											<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+												<circle
+													class="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													stroke-width="4"
+												></circle>
+												<path
+													class="opacity-75"
+													fill="currentColor"
+													d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												></path>
+											</svg>
+											Processing...
+										{:else}
+											<svg
+												class="mr-2 h-4 w-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												/>
+											</svg>
+											Clean Text
+										{/if}
+									</button>
+								</div>
 							</div>
+
+							{#if cleaningResult}
+								<button
+									class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
+									on:click={() => (showResults = !showResults)}
+								>
+									{showResults ? 'Hide Cleaning Results' : 'Show Cleaning Results'}
+								</button>
+							{/if}
+
+							{#if copySuccess}
+								<p class="mt-2 text-sm text-green-600">Cleaned text copied to clipboard!</p>
+							{/if}
 						</div>
-					</div>
+					{:else}
+						<div class="p-6" transition:slide>
+							<p class="truncate text-sm text-gray-600 italic">{inputText}</p>
+							{#if copySuccess}
+								<p class="mt-2 text-sm text-green-600">Cleaned text copied to clipboard!</p>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 
 			<!-- Results Section -->
 			<div class="space-y-6">
 				{#if cleaningResult}
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
-						<div class="border-b border-gray-100 px-6 py-4">
-							<div class="flex items-center justify-between">
+					{#if showResults}
+						<div
+							class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
+							transition:slide
+						>
+							<div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
 								<div class="flex items-center space-x-3">
 									<div
 										class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-100 to-emerald-100"
@@ -306,8 +345,14 @@ This tool analyzes your text for:
 										{/if}
 									</div>
 								</div>
+								<button class="text-sm text-blue-600" on:click={() => (showResults = false)}
+									>Hide</button
+								>
+							</div>
+
+							<div class="p-6">
 								{#if hasChanges}
-									<div class="flex items-center space-x-4 text-xs">
+									<div class="mb-4 flex items-center space-x-4 text-xs">
 										<div class="flex items-center space-x-1">
 											<div class="h-3 w-3 rounded-full border border-red-300 bg-red-100"></div>
 											<span class="text-gray-600">Hidden whitespace</span>
@@ -320,95 +365,101 @@ This tool analyzes your text for:
 										</div>
 									</div>
 								{/if}
-							</div>
-						</div>
 
-						<div class="p-6">
-							{#if hasChanges && showDiff}
-								<div
-									class="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"
-								>
-									<div class="border-b border-gray-200 px-4 py-3">
-										<p class="text-sm font-medium text-gray-700">
-											Original text with highlighted changes:
-										</p>
-									</div>
-									<div class="p-4" style="max-height: 40vh; overflow-y: auto;">
-										<HighlightedText
-											text={cleaningResult.original}
-											changes={cleaningResult.changes}
-										/>
-									</div>
-								</div>
-							{/if}
-							{#if !hasChanges}
-								<div
-									class="mb-6 rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4"
-								>
-									<div class="flex items-center space-x-3">
-										<div
-											class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100"
-										>
-											<svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-												<path
-													fill-rule="evenodd"
-													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</div>
-										<div>
-											<p class="font-semibold text-green-800">No suspicious markers found!</p>
-											<p class="mt-1 text-sm text-green-700">
-												Your text appears to be clean already.
+								{#if hasChanges && showDiff}
+									<div
+										class="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"
+									>
+										<div class="border-b border-gray-200 px-4 py-3">
+											<p class="text-sm font-medium text-gray-700">
+												Original text with highlighted changes:
 											</p>
 										</div>
+										<div class="p-4" style="max-height: 40vh; overflow-y: auto;">
+											<HighlightedText
+												text={cleaningResult.original}
+												changes={cleaningResult.changes}
+											/>
+										</div>
 									</div>
-								</div>
-							{/if}
-
-							{#if hasChanges}
-								<button
-									onclick={() => (showDiff = !showDiff)}
-									class="mb-4 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
-								>
-									{showDiff ? 'Hide Changes' : 'View Changes'}
-								</button>
-							{/if}
-
-							<button
-								onclick={copyCleanText}
-								class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
-							>
-								{#if copySuccess}
-									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M5 13l4 4L19 7"
-										/>
-									</svg>
-									<span>Copied to Clipboard!</span>
-								{:else}
-									<svg
-										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-										/>
-									</svg>
-									<span>Copy Clean Text</span>
 								{/if}
-							</button>
+
+								{#if !hasChanges}
+									<div
+										class="mb-6 rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4"
+									>
+										<div class="flex items-center space-x-3">
+											<div
+												class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100"
+											>
+												<svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+													<path
+														fill-rule="evenodd"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</div>
+											<div>
+												<p class="font-semibold text-green-800">No suspicious markers found!</p>
+												<p class="mt-1 text-sm text-green-700">
+													Your text appears to be clean already.
+												</p>
+											</div>
+										</div>
+									</div>
+								{/if}
+
+								{#if hasChanges}
+									<button
+										on:click={() => (showDiff = !showDiff)}
+										class="mb-4 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
+									>
+										{showDiff ? 'Hide Changes' : 'View Changes'}
+									</button>
+								{/if}
+
+								<div class="mt-4 flex items-center justify-between">
+									<button
+										on:click={copyCleanText}
+										class="group inline-flex items-center rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
+									>
+										{#if copySuccess}
+											<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												/>
+											</svg>
+											<span>Copied to Clipboard!</span>
+										{:else}
+											<svg
+												class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+												/>
+											</svg>
+											<span>Copy Clean Text</span>
+										{/if}
+									</button>
+									<button
+										on:click={() => (showResults = false)}
+										class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
+										>Hide Results</button
+									>
+								</div>
+							</div>
 						</div>
-					</div>
+					{/if}
 				{:else}
 					<div
 						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
