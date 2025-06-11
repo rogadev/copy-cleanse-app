@@ -8,6 +8,7 @@
 	let isProcessing = $state(false);
 	let copySuccess = $state(false);
 	let showDiff = $state(false);
+	let inputMinimized = $state(false);
 
 	function handleClean(autoCopy = false) {
 		if (!inputText.trim()) return;
@@ -19,6 +20,8 @@
 			isProcessing = false;
 			if (autoCopy) {
 				copyCleanText();
+				// Minimize input after auto-clean (on paste)
+				inputMinimized = true;
 			}
 		}, 100);
 	}
@@ -29,9 +32,7 @@
 		try {
 			await navigator.clipboard.writeText(cleaningResult.cleaned);
 			copySuccess = true;
-			setTimeout(() => {
-				copySuccess = false;
-			}, 2000);
+			// No timeout - success message stays until user resets
 		} catch (err) {
 			console.error('Failed to copy text:', err);
 		}
@@ -41,6 +42,8 @@
 		inputText = '';
 		cleaningResult = null;
 		copySuccess = false;
+		inputMinimized = false;
+		showDiff = false;
 	}
 
 	function handlePaste(event: ClipboardEvent) {
@@ -48,8 +51,12 @@
 		if (!pasted) return;
 		event.preventDefault();
 		inputText = pasted;
-		handleClean(true);
+		handleClean(true); // Auto-copy and minimize on paste
 		showDiff = false;
+	}
+
+	function expandInput() {
+		inputMinimized = false;
 	}
 
 	let changeCount = $derived(cleaningResult?.changes.length ?? 0);
@@ -126,138 +133,30 @@
 				<p class="mt-4 text-lg leading-7 text-gray-600">
 					Remove hidden markers and formatting inconsistencies from AI-generated text
 				</p>
-
-				<!-- Quick Stats -->
-				<div class="mt-6 flex justify-center">
-					<div class="flex items-center space-x-6 text-sm">
-						<div class="flex items-center space-x-2">
-							<div class="h-2 w-2 rounded-full bg-green-500"></div>
-							<span class="text-gray-600">Instant Processing</span>
-						</div>
-						<div class="flex items-center space-x-2">
-							<div class="h-2 w-2 rounded-full bg-blue-500"></div>
-							<span class="text-gray-600">100% Private</span>
-						</div>
-						<div class="flex items-center space-x-2">
-							<div class="h-2 w-2 rounded-full bg-purple-500"></div>
-							<a
-								href="https://github.com/rogadev/clean.roga.dev"
-								target="_blank"
-								rel="noopener noreferrer"
-								class="text-gray-600 hover:text-purple-600 transition-colors duration-200"
-								>Open Source</a
-							>
-						</div>
-					</div>
-				</div>
 			</div>
 		</div>
 
 		<!-- Main Interface - Prioritized -->
-		<div class="mt-12 grid gap-8 lg:grid-cols-2">
+		<div class="mt-12 space-y-6">
 			<!-- Input Section -->
 			<div class="space-y-6">
-				<div
-					class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-				>
-					<div class="border-b border-gray-100 px-6 py-4">
-						<div class="flex items-center space-x-3">
-							<div
-								class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100"
-							>
-								<svg
-									class="h-4 w-4 text-blue-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-									/>
-								</svg>
-							</div>
-							<h2 class="text-lg font-semibold text-gray-900">Input Text</h2>
-						</div>
-					</div>
-
-					<div class="p-6">
-						<label for="input-text" class="mb-3 block text-sm font-medium text-gray-700">
-							Paste your AI-generated text here:
-						</label>
-						<div class="relative">
-							<textarea
-								id="input-text"
-								bind:value={inputText}
-								placeholder="Paste text from ChatGPT, Claude, or other AI tools to detect and remove hidden markers...
-
-This tool analyzes your text for:
-• Hidden whitespace characters
-• Em dashes and formatting markers
-• Unicode spacing characters
-• Invisible formatting inconsistencies"
-								class="block h-64 w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset"
-								style="max-height: 50vh; overflow-y: auto;"
-							></textarea>
-							{#if inputText.length > 0}
-								<div class="absolute top-3 right-3">
-									<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-										{inputText.length} chars
-									</div>
-								</div>
-							{/if}
-						</div>
-
-						<div class="mt-6 flex items-center justify-between">
-							<div class="text-sm text-gray-500">
-								{#if inputText.length > 0}
-									{inputText.length} characters • {inputText.split('\n').length} lines
-								{:else}
-									Ready to analyze your text
-								{/if}
-							</div>
-							<div class="flex space-x-3">
-								<button
-									onclick={reset}
-									disabled={!inputText && !cleaningResult}
-									class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-										/>
-									</svg>
-									Reset
-								</button>
-								<button
-									onclick={() => handleClean()}
-									disabled={!inputText.trim() || isProcessing}
-									class="inline-flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									{#if isProcessing}
-										<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-											<circle
-												class="opacity-25"
-												cx="12"
-												cy="12"
-												r="10"
-												stroke="currentColor"
-												stroke-width="4"
-											></circle>
-											<path
-												class="opacity-75"
-												fill="currentColor"
-												d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-											></path>
-										</svg>
-										Processing...
-									{:else}
-										<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				{#if inputMinimized && cleaningResult}
+					<!-- Minimized Input State -->
+					<div
+						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
+					>
+						<div class="px-6 py-4">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center space-x-3">
+									<div
+										class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-100 to-emerald-100"
+									>
+										<svg
+											class="h-4 w-4 text-green-600"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
 											<path
 												stroke-linecap="round"
 												stroke-linejoin="round"
@@ -265,18 +164,267 @@ This tool analyzes your text for:
 												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 											/>
 										</svg>
-										Clean Text
-									{/if}
-								</button>
+									</div>
+									<div>
+										<h3 class="text-lg font-semibold text-gray-900">Text Processed</h3>
+										<p class="text-sm text-gray-600">
+											{inputText.length} characters • {changeCount}
+											{changeCount === 1 ? 'issue' : 'issues'} found
+										</p>
+									</div>
+								</div>
+								<div class="flex justify-end gap-2">
+									<button
+										onclick={expandInput}
+										class="inline-flex flex-1 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none sm:flex-initial"
+									>
+										<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+										Edit
+									</button>
+									<button
+										onclick={reset}
+										class="inline-flex flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none sm:flex-initial"
+									>
+										<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 4v16m8-8H4"
+											/>
+										</svg>
+										New
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+
+					<!-- Visual Comparison View (Mobile-friendly) -->
+					{#if showDiff}
+						<div
+							class="overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-xl backdrop-blur-sm"
+						>
+							<div class="border-b border-amber-200 px-6 py-4">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center space-x-3">
+										<div
+											class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-yellow-100"
+										>
+											<svg
+												class="h-4 w-4 text-amber-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+												/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+												/>
+											</svg>
+										</div>
+										<div>
+											{#if hasChanges}
+												<h3 class="text-lg font-semibold text-amber-900">Changes Found</h3>
+												<p class="text-sm text-amber-700">
+													Original text with {changeCount} highlighted {changeCount === 1
+														? 'issue'
+														: 'issues'}
+												</p>
+											{:else}
+												<h3 class="text-lg font-semibold text-amber-900">Original Text</h3>
+												<p class="text-sm text-amber-700">
+													No changes needed - text was already clean
+												</p>
+											{/if}
+										</div>
+									</div>
+									<button
+										onclick={() => (showDiff = false)}
+										aria-label="Close comparison view"
+										class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-700 shadow-sm transition-all duration-200 hover:bg-amber-50 focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 focus:outline-none"
+									>
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M6 18L18 6M6 6l12 12"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
+							<div class="p-6">
+								<!-- Legend -->
+								<div class="mb-4 flex flex-wrap items-center gap-4 text-xs">
+									<div class="flex items-center space-x-1">
+										<div class="h-3 w-3 rounded-full border border-red-300 bg-red-100"></div>
+										<span class="text-gray-600">Hidden characters</span>
+									</div>
+									<div class="flex items-center space-x-1">
+										<div class="h-3 w-3 rounded-full border border-yellow-300 bg-yellow-100"></div>
+										<span class="text-gray-600">Smart quotes</span>
+									</div>
+									<div class="flex items-center space-x-1">
+										<div class="h-3 w-3 rounded-full border border-blue-300 bg-blue-100"></div>
+										<span class="text-gray-600">Dashes & other marks</span>
+									</div>
+								</div>
+								<div
+									class="rounded-lg border border-amber-200 bg-white"
+									style="max-height: 40vh; overflow-y: auto;"
+								>
+									<div class="p-4">
+										{#if hasChanges}
+											<HighlightedText
+												text={cleaningResult.original}
+												changes={cleaningResult.changes}
+											/>
+										{:else}
+											<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
+												{cleaningResult.original}
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<!-- Full Input State -->
+					<div
+						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
+					>
+						<div class="border-b border-gray-100 px-6 py-4">
+							<div class="flex items-center space-x-3">
+								<div
+									class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100"
+								>
+									<svg
+										class="h-4 w-4 text-blue-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+										/>
+									</svg>
+								</div>
+								<h2 class="text-lg font-semibold text-gray-900">Input Text</h2>
+							</div>
+						</div>
+
+						<div class="p-6">
+							<div class="relative">
+								<textarea
+									id="input-text"
+									bind:value={inputText}
+									placeholder="Paste your AI generated text here...
+
+✨ Auto-processing: Text is automatically cleaned when you paste
+📋 Auto-copy: Clean results are instantly copied to your clipboard
+🔍 Detects and removes:
+• Hidden whitespace & zero-width characters (invisible markers)
+• Smart quotes → regular quotes
+• Em dashes (—) & en dashes (–) → regular dashes (-)
+• Unicode ellipsis (…) → regular dots (...)
+• Soft hyphens (invisible line-break hints)
+• Fullwidth characters → regular characters
+• All suspicious formatting used for AI detection
+
+Just paste your text and you're done!"
+									class="block h-[21.5rem] w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset lg:h-[15.5rem]"
+									style="max-height: 50vh; overflow-y: auto;"
+								></textarea>
+								{#if inputText.length > 0}
+									<div class="absolute top-3 right-3">
+										<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+											{inputText.length} chars
+										</div>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Results Section -->
-			<div class="space-y-6">
-				{#if cleaningResult}
+			{#if cleaningResult}
+				<div class="space-y-6">
+					<!-- Clipboard Success Banner -->
+					{#if copySuccess}
+						<div
+							class="overflow-hidden rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg"
+						>
+							<div class="flex items-center justify-between px-6 py-4">
+								<div class="flex items-center space-x-3">
+									<div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+										<svg
+											class="h-5 w-5 text-green-600"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											/>
+										</svg>
+									</div>
+									<div>
+										<h3 class="text-lg font-semibold text-green-800">
+											✨ Clean text copied to clipboard!
+										</h3>
+										<p class="text-sm text-green-700">
+											Ready to paste anywhere • {cleaningResult.cleaned.length} characters
+										</p>
+									</div>
+								</div>
+								<div class="hidden items-center space-x-2 sm:flex">
+									<div class="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1">
+										<svg
+											class="h-4 w-4 text-green-600"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+											/>
+										</svg>
+										<span class="text-sm font-medium text-green-700">Copied</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
+
 					<div
 						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
 					>
@@ -313,16 +461,20 @@ This tool analyzes your text for:
 									</div>
 								</div>
 								{#if hasChanges}
-									<div class="flex items-center space-x-4 text-xs">
+									<div class="hidden items-center space-x-4 text-xs sm:flex">
 										<div class="flex items-center space-x-1">
 											<div class="h-3 w-3 rounded-full border border-red-300 bg-red-100"></div>
-											<span class="text-gray-600">Hidden whitespace</span>
+											<span class="text-gray-600">Hidden characters</span>
 										</div>
 										<div class="flex items-center space-x-1">
 											<div
 												class="h-3 w-3 rounded-full border border-yellow-300 bg-yellow-100"
 											></div>
-											<span class="text-gray-600">Em dashes</span>
+											<span class="text-gray-600">Smart quotes</span>
+										</div>
+										<div class="flex items-center space-x-1">
+											<div class="h-3 w-3 rounded-full border border-blue-300 bg-blue-100"></div>
+											<span class="text-gray-600">Dashes & other marks</span>
 										</div>
 									</div>
 								{/if}
@@ -330,20 +482,30 @@ This tool analyzes your text for:
 						</div>
 
 						<div class="p-6">
-							{#if hasChanges && showDiff}
+							{#if showDiff}
 								<div
 									class="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"
 								>
 									<div class="border-b border-gray-200 px-4 py-3">
 										<p class="text-sm font-medium text-gray-700">
-											Original text with highlighted changes:
+											{#if hasChanges}
+												Original text with highlighted changes:
+											{:else}
+												Original text (no changes needed):
+											{/if}
 										</p>
 									</div>
 									<div class="p-4" style="max-height: 40vh; overflow-y: auto;">
-										<HighlightedText
-											text={cleaningResult.original}
-											changes={cleaningResult.changes}
-										/>
+										{#if hasChanges}
+											<HighlightedText
+												text={cleaningResult.original}
+												changes={cleaningResult.changes}
+											/>
+										{:else}
+											<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
+												{cleaningResult.original}
+											</div>
+										{/if}
 									</div>
 								</div>
 							{/if}
@@ -373,30 +535,40 @@ This tool analyzes your text for:
 								</div>
 							{/if}
 
-							{#if hasChanges}
+							<!-- Buttons Container - Side by side on desktop, stacked on mobile -->
+							<div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+								<!-- Show/Hide Results Button -->
 								<button
 									onclick={() => (showDiff = !showDiff)}
-									class="mb-4 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
+									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
 								>
-									{showDiff ? 'Hide Changes' : 'View Changes'}
-								</button>
-							{/if}
-
-							<button
-								onclick={copyCleanText}
-								class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
-							>
-								{#if copySuccess}
-									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg
+										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"
 											stroke-width="2"
-											d="M5 13l4 4L19 7"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
 										/>
 									</svg>
-									<span>Copied to Clipboard!</span>
-								{:else}
+									<span>{showDiff ? 'Hide' : 'Show'} Results</span>
+								</button>
+
+								<!-- Copy Again Button -->
+								<button
+									onclick={copyCleanText}
+									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
+								>
 									<svg
 										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
 										fill="none"
@@ -410,12 +582,14 @@ This tool analyzes your text for:
 											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
 										/>
 									</svg>
-									<span>Copy Clean Text</span>
-								{/if}
-							</button>
+									<span>Copy Again</span>
+								</button>
+							</div>
 						</div>
 					</div>
-				{:else}
+				</div>
+			{:else}
+				<div class="space-y-6">
 					<div
 						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
 					>
@@ -441,8 +615,8 @@ This tool analyzes your text for:
 							<p class="mt-2 text-sm text-gray-600">Results will appear here after processing</p>
 						</div>
 					</div>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- How it Works - Below the fold -->
@@ -520,15 +694,23 @@ This tool analyzes your text for:
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
-													<span>Em dashes (—) replaced with regular dashes ( - )</span>
+													<span>Smart quotes and curly apostrophes</span>
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
-													<span>Various Unicode spacing characters used as markers</span>
+													<span>Em dashes (—) and en dashes (–)</span>
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
-													<span>Invisible formatting inconsistencies</span>
+													<span>Unicode ellipsis (…) and soft hyphens</span>
+												</li>
+												<li class="flex items-start space-x-2">
+													<span class="text-gray-400">•</span>
+													<span>Fullwidth characters (Ａ１ → A1)</span>
+												</li>
+												<li class="flex items-start space-x-2">
+													<span class="text-gray-400">•</span>
+													<span>All other suspicious Unicode markers</span>
 												</li>
 											</ul>
 										</div>
@@ -680,7 +862,7 @@ This tool analyzes your text for:
 						href="https://github.com/rogadev/clean.roga.dev"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="hover:text-blue-600 transition-colors duration-200">Open source</a
+						class="transition-colors duration-200 hover:text-blue-600">Open source</a
 					> • Made with ❤️ for content creators
 				</p>
 				<div class="mt-4 flex justify-center space-x-6 text-sm text-gray-400">
@@ -708,7 +890,7 @@ This tool analyzes your text for:
 						href="https://github.com/rogadev/clean.roga.dev"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="flex items-center space-x-1 hover:text-blue-400 transition-colors duration-200"
+						class="flex items-center space-x-1 transition-colors duration-200 hover:text-blue-400"
 					>
 						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 							<path
