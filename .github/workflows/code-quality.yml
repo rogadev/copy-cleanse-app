@@ -85,7 +85,7 @@ jobs:
         with:
           install-dependencies: true
 
-      - name: Verify Chrome installation
+      - name: Verify Chrome installation and sandbox flags
         run: |
           echo "Verifying Chrome installation..."
           CHROME_PATH="${{ steps.setup-chrome.outputs.chrome-path }}"
@@ -94,6 +94,17 @@ jobs:
           if [ -f "$CHROME_PATH" ]; then
             echo "✅ Chrome binary found"
             $CHROME_PATH --version || echo "⚠️  Could not get Chrome version"
+            
+            echo "Testing Chrome launch with sandbox flags..."
+            timeout 10s $CHROME_PATH --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu --headless --remote-debugging-port=9999 --disable-web-security about:blank || {
+              echo "❌ Chrome failed to launch with sandbox flags"
+              exit 1
+            }
+            echo "✅ Chrome launches successfully with sandbox flags"
+            
+            # Kill any Chrome processes that might still be running
+            pkill -f chrome || true
+            sleep 2
           else
             echo "❌ Chrome binary not found at expected path"
             exit 1
@@ -146,6 +157,7 @@ jobs:
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          LHCI_CHROME_FLAGS: '--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu'
           DEBUG: 'lhci:*'
 
   bundle-analysis:
