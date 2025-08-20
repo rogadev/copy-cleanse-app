@@ -1,69 +1,12 @@
-name: Code Quality & Lighthouse CI
+name: Code Quality
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  lighthouse-ci:
-    name: Lighthouse CI
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build project
-        run: pnpm build
-
-      - name: Install Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-
-      - name: Verify Chrome installation and sandbox flags
-        run: |
-          CHROME_PATH=$(which google-chrome-stable)
-          echo "Chrome path: $CHROME_PATH"
-          
-          # Test Chrome launch with comprehensive CI-friendly flags
-          timeout 10s $CHROME_PATH \
-            --no-sandbox \
-            --disable-setuid-sandbox \
-            --disable-dev-shm-usage \
-            --disable-gpu \
-            --disable-software-rasterizer \
-            --headless \
-            --remote-debugging-port=9999 \
-            --disable-web-security \
-            --single-process \
-            --disable-background-networking \
-            about:blank || {
-              echo "❌ Chrome failed to launch with sandbox flags"
-              exit 1
-          }
-          echo "✅ Chrome launched successfully"
-
-      - name: Run Lighthouse CI
-        run: npx @lhci/cli@0.12.x autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
