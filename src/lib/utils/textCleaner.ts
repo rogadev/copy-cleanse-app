@@ -9,7 +9,7 @@ export interface TextChange {
 	end: number;
 	original: string;
 	replacement: string;
-	type: 'whitespace' | 'em-dash' | 'en-dash' | 'smart-quotes' | 'ellipsis' | 'soft-hyphen' | 'fullwidth' | 'other';
+	type: 'whitespace' | 'em-dash' | 'en-dash' | 'smart-quotes' | 'ellipsis' | 'soft-hyphen' | 'fullwidth' | 'url-params' | 'other';
 }
 
 // Common AI-generated text markers and suspicious whitespace characters
@@ -47,6 +47,82 @@ const CURLY_APOSTROPHE_REGEX = /\u2019/g; // Curly apostrophe
 const FULLWIDTH_UPPERCASE_REGEX = /[Ａ-Ｚ]/g;
 const FULLWIDTH_LOWERCASE_REGEX = /[ａ-ｚ]/g;
 const FULLWIDTH_NUMBERS_REGEX = /[０-９]/g;
+
+// AI Platform URL tracking parameters that should be removed
+const AI_TRACKING_PARAMS = [
+	'source=chatgpt',
+	'source=openai',
+	'source=claude',
+	'source=anthropic',
+	'source=gemini',
+	'source=bard',
+	'source=copilot',
+	'source=bing',
+	'utm_source=chatgpt',
+	'utm_source=openai',
+	'utm_source=claude',
+	'utm_source=anthropic',
+	'utm_source=gemini',
+	'utm_source=bard',
+	'utm_source=copilot',
+	'utm_source=bing',
+	'ref=chatgpt',
+	'ref=openai',
+	'ref=claude',
+	'ref=anthropic',
+	'ref=gemini',
+	'ref=bard',
+	'ref=copilot',
+	'ref=bing'
+];
+
+// URL detection regex - matches HTTP/HTTPS URLs
+const URL_REGEX = /https?:\/\/[^\s]+/gi;
+
+/**
+ * Cleans AI tracking parameters from a single URL
+ */
+function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; } {
+	try {
+		const urlObj = new URL(url);
+		const removedParams: string[] = [];
+		const paramsToDelete: string[] = [];
+
+		// First pass: identify parameters to remove
+		for (const [key, value] of urlObj.searchParams.entries()) {
+			const paramString = `${key}=${value}`;
+			const paramKey = key.toLowerCase();
+
+			// Check if this parameter matches any AI tracking pattern
+			const isAiParam = AI_TRACKING_PARAMS.some(pattern =>
+				pattern.toLowerCase() === paramString.toLowerCase()
+			) || (
+					// Also check for just the parameter keys (more flexible)
+					(paramKey === 'source' || paramKey === 'utm_source' || paramKey === 'ref') &&
+					(value.toLowerCase().match(/^(chatgpt|openai|claude|anthropic|gemini|bard|copilot|bing)$/))
+				);
+
+			if (isAiParam) {
+				removedParams.push(paramString);
+				paramsToDelete.push(key);
+			}
+		}
+
+		// Second pass: remove the identified parameters
+		paramsToDelete.forEach(key => urlObj.searchParams.delete(key));
+
+		return {
+			cleanedUrl: urlObj.toString(),
+			removedParams
+		};
+	} catch (error) {
+		// If URL parsing fails, return original URL
+		return {
+			cleanedUrl: url,
+			removedParams: []
+		};
+	}
+}
 
 export function cleanText(text: string): CleaningResult {
 	const changes: TextChange[] = [];
@@ -189,6 +265,26 @@ export function cleanText(text: string): CleaningResult {
 		}
 	}
 
+	// Find and clean URLs with AI tracking parameters
+	const urlMatches = [...text.matchAll(URL_REGEX)];
+	for (const match of urlMatches) {
+		if (match.index !== undefined) {
+			const originalUrl = match[0];
+			const { cleanedUrl, removedParams } = cleanUrl(originalUrl);
+
+			// Only add change if parameters were actually removed
+			if (removedParams.length > 0) {
+				changes.push({
+					start: match.index,
+					end: match.index + originalUrl.length,
+					original: originalUrl,
+					replacement: cleanedUrl,
+					type: 'url-params'
+				});
+			}
+		}
+	}
+
 	// Sort changes by position to apply them correctly
 	changes.sort((a, b) => a.start - b.start);
 
@@ -219,6 +315,11 @@ export function cleanText(text: string): CleaningResult {
 }
 
 export function getCharacterName(char: string): string {
+	// Handle URL parameter descriptions (when char is actually a URL)
+	if (char.startsWith('http://') || char.startsWith('https://')) {
+		return 'URL with AI tracking parameters';
+	}
+
 	const charMap: Record<string, string> = {
 		// Whitespace characters
 		'\u00A0': 'Non-breaking space',
