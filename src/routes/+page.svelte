@@ -69,7 +69,7 @@
 	/>
 </svelte:head>
 
-<svelte:window on:paste={handlePaste} />
+<svelte:window onpaste={handlePaste} />
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 	<!-- Navigation/Header Bar -->
