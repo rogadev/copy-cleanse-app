@@ -9,7 +9,7 @@ export interface TextChange {
 	end: number;
 	original: string;
 	replacement: string;
-	type: 'whitespace' | 'em-dash' | 'en-dash' | 'smart-quotes' | 'ellipsis' | 'soft-hyphen' | 'fullwidth' | 'other';
+	type: 'whitespace' | 'em-dash' | 'en-dash' | 'smart-quotes' | 'ellipsis' | 'soft-hyphen' | 'fullwidth' | 'url-params' | 'other';
 }
 
 // Common AI-generated text markers and suspicious whitespace characters
@@ -36,7 +36,6 @@ const SUSPICIOUS_WHITESPACE = [
 ];
 
 // Character patterns that indicate AI generation
-const EM_DASH_REGEX = /\u2014/g; // Em dash
 const EN_DASH_REGEX = /\u2013/g; // En dash (often used where hyphen should be)
 const SMART_QUOTES_REGEX = /[\u201C\u201D\u2018\u2019]/g; // Smart/curly quotes
 const UNICODE_ELLIPSIS_REGEX = /\u2026/g; // Unicode ellipsis character
@@ -48,19 +47,103 @@ const FULLWIDTH_UPPERCASE_REGEX = /[Ａ-Ｚ]/g;
 const FULLWIDTH_LOWERCASE_REGEX = /[ａ-ｚ]/g;
 const FULLWIDTH_NUMBERS_REGEX = /[０-９]/g;
 
+// AI Platform URL tracking parameters that should be removed
+const AI_TRACKING_PARAMS = [
+	'source=chatgpt',
+	'source=openai',
+	'source=claude',
+	'source=anthropic',
+	'source=gemini',
+	'source=bard',
+	'source=copilot',
+	'source=bing',
+	'utm_source=chatgpt',
+	'utm_source=openai',
+	'utm_source=claude',
+	'utm_source=anthropic',
+	'utm_source=gemini',
+	'utm_source=bard',
+	'utm_source=copilot',
+	'utm_source=bing',
+	'ref=chatgpt',
+	'ref=openai',
+	'ref=claude',
+	'ref=anthropic',
+	'ref=gemini',
+	'ref=bard',
+	'ref=copilot',
+	'ref=bing'
+];
+
+// URL detection regex - matches HTTP/HTTPS URLs
+const URL_REGEX = /https?:\/\/[^\s]+/gi;
+
+/**
+ * Cleans AI tracking parameters from a single URL
+ */
+function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; } {
+	try {
+		const urlObj = new URL(url);
+		const removedParams: string[] = [];
+		const paramsToDelete: string[] = [];
+
+		// First pass: identify parameters to remove
+		for (const [key, value] of urlObj.searchParams.entries()) {
+			const paramString = `${key}=${value}`;
+			const paramKey = key.toLowerCase();
+
+			// Check if this parameter matches any AI tracking pattern
+			const isAiParam = AI_TRACKING_PARAMS.some(pattern =>
+				pattern.toLowerCase() === paramString.toLowerCase()
+			) || (
+					// Also check for just the parameter keys (more flexible)
+					(paramKey === 'source' || paramKey === 'utm_source' || paramKey === 'ref') &&
+					(value.toLowerCase().match(/^(chatgpt|openai|claude|anthropic|gemini|bard|copilot|bing)$/))
+				);
+
+			if (isAiParam) {
+				removedParams.push(paramString);
+				paramsToDelete.push(key);
+			}
+		}
+
+		// Second pass: remove the identified parameters
+		paramsToDelete.forEach(key => urlObj.searchParams.delete(key));
+
+		return {
+			cleanedUrl: urlObj.toString(),
+			removedParams
+		};
+	} catch (error) {
+		// If URL parsing fails, return original URL
+		return {
+			cleanedUrl: url,
+			removedParams: []
+		};
+	}
+}
+
 export function cleanText(text: string): CleaningResult {
 	const changes: TextChange[] = [];
 	let cleaned = text;
 
-	// Find em dashes
-	const emDashMatches = [...text.matchAll(EM_DASH_REGEX)];
-	for (const match of emDashMatches) {
+	// Find em dashes with context to handle spacing properly
+	const emDashContextRegex = /(\s?)\u2014(\s?)/g;
+	const emDashContextMatches = [...text.matchAll(emDashContextRegex)];
+	for (const match of emDashContextMatches) {
 		if (match.index !== undefined) {
+			const beforeSpace = match[1]; // space before em dash (if any)
+			const afterSpace = match[2];  // space after em dash (if any)
+			const fullMatch = match[0];
+
+			// Always ensure exactly one space on each side
+			const replacement = ' - ';
+
 			changes.push({
 				start: match.index,
-				end: match.index + 1,
-				original: '\u2014',
-				replacement: ' - ',
+				end: match.index + fullMatch.length,
+				original: fullMatch,
+				replacement: replacement,
 				type: 'em-dash'
 			});
 		}
@@ -189,6 +272,26 @@ export function cleanText(text: string): CleaningResult {
 		}
 	}
 
+	// Find and clean URLs with AI tracking parameters
+	const urlMatches = [...text.matchAll(URL_REGEX)];
+	for (const match of urlMatches) {
+		if (match.index !== undefined) {
+			const originalUrl = match[0];
+			const { cleanedUrl, removedParams } = cleanUrl(originalUrl);
+
+			// Only add change if parameters were actually removed
+			if (removedParams.length > 0) {
+				changes.push({
+					start: match.index,
+					end: match.index + originalUrl.length,
+					original: originalUrl,
+					replacement: cleanedUrl,
+					type: 'url-params'
+				});
+			}
+		}
+	}
+
 	// Sort changes by position to apply them correctly
 	changes.sort((a, b) => a.start - b.start);
 
@@ -219,6 +322,11 @@ export function cleanText(text: string): CleaningResult {
 }
 
 export function getCharacterName(char: string): string {
+	// Handle URL parameter descriptions (when char is actually a URL)
+	if (char.startsWith('http://') || char.startsWith('https://')) {
+		return 'URL with AI tracking parameters';
+	}
+
 	const charMap: Record<string, string> = {
 		// Whitespace characters
 		'\u00A0': 'Non-breaking space',

@@ -61,6 +61,8 @@
 			case 'en-dash':
 			case 'fullwidth':
 				return 'border border-blue-300 bg-blue-100';
+			case 'url-params':
+				return 'border border-purple-300 bg-purple-100';
 			default:
 				return 'border border-gray-300 bg-gray-100';
 		}
@@ -78,6 +80,8 @@
 			case 'en-dash':
 			case 'fullwidth':
 				return 'text-blue-700';
+			case 'url-params':
+				return 'text-purple-700';
 			default:
 				return 'text-gray-700';
 		}

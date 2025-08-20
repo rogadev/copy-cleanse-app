@@ -285,6 +285,10 @@
 										<div class="h-3 w-3 rounded-full border border-blue-300 bg-blue-100"></div>
 										<span class="text-gray-600">Dashes & other marks</span>
 									</div>
+									<div class="flex items-center space-x-1">
+										<div class="h-3 w-3 rounded-full border border-purple-300 bg-purple-100"></div>
+										<span class="text-gray-600">AI tracking URLs</span>
+									</div>
 								</div>
 								<div
 									class="rounded-lg border border-amber-200 bg-white"
@@ -350,6 +354,7 @@
 • Unicode ellipsis (…) → regular dots (...)
 • Soft hyphens (invisible line-break hints)
 • Fullwidth characters → regular characters
+• AI tracking URL parameters (?source=chatgpt, ?utm_source=openai, etc.)
 • All suspicious formatting used for AI detection
 
 Just paste your text and you're done!"
@@ -475,6 +480,10 @@ Just paste your text and you're done!"
 										<div class="flex items-center space-x-1">
 											<div class="h-3 w-3 rounded-full border border-blue-300 bg-blue-100"></div>
 											<span class="text-gray-600">Dashes & other marks</span>
+										</div>
+										<div class="flex items-center space-x-1">
+											<div class="h-3 w-3 rounded-full border border-purple-300 bg-purple-100"></div>
+											<span class="text-gray-600">AI tracking URLs</span>
 										</div>
 									</div>
 								{/if}
@@ -707,6 +716,10 @@ Just paste your text and you're done!"
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
 													<span>Fullwidth characters (Ａ１ → A1)</span>
+												</li>
+												<li class="flex items-start space-x-2">
+													<span class="text-gray-400">•</span>
+													<span>AI tracking URL parameters (?source=chatgpt, ?utm_source=openai)</span>
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
