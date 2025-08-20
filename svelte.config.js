@@ -1,11 +1,15 @@
-import adapterAuto from '@sveltejs/adapter-auto';
+import adapterVercel from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: vitePreprocess(),
 
-	kit: { adapter: adapterAuto() }
+	kit: {
+		adapter: adapterVercel({
+			runtime: 'nodejs22.x'
+		})
+	}
 };
 
 export default config;
