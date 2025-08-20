@@ -85,20 +85,68 @@ jobs:
         with:
           install-dependencies: true
 
+      - name: Verify Chrome installation
+        run: |
+          echo "Verifying Chrome installation..."
+          CHROME_PATH="${{ steps.setup-chrome.outputs.chrome-path }}"
+          echo "Chrome path: $CHROME_PATH"
+
+          if [ -f "$CHROME_PATH" ]; then
+            echo "✅ Chrome binary found"
+            $CHROME_PATH --version || echo "⚠️  Could not get Chrome version"
+          else
+            echo "❌ Chrome binary not found at expected path"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build project
         run: pnpm build
 
-      - name: Serve and run Lighthouse CI
+      - name: Run Lighthouse CI
         run: |
-          pnpm preview &
-          sleep 10
-          npx --yes @lhci/cli@latest autorun --upload.target=temporary-public-storage
+          echo "🚀 Running Lighthouse CI..."
+          echo "Chrome path: $CHROME_PATH"
+          echo "Node version: $(node --version)"
+          echo "Chrome version: $($CHROME_PATH --version 2>/dev/null || echo 'Chrome version not detected')"
+
+          # Add some debug info
+          echo "Available memory:"
+          free -h || true
+          echo "Available disk space:"
+          df -h . || true
+
+          echo "Starting Lighthouse CI autorun..."
+          set -e
+          npx --yes @lhci/cli@latest autorun --config=./lighthouserc.json || {
+            echo "❌ Lighthouse CI failed. Checking for debugging info..."
+            
+            # Check if there are any lighthouse reports
+            if [ -d ".lighthouseci" ]; then
+              echo "📋 Lighthouse CI directory contents:"
+              ls -la .lighthouseci/ || true
+              
+              # Show any error logs if they exist
+              if [ -f ".lighthouseci/lhci_reports/manifest.json" ]; then
+                echo "📊 Lighthouse reports manifest:"
+                cat .lighthouseci/lhci_reports/manifest.json || true
+              fi
+            fi
+            
+            # Check if server is still running
+            echo "🔍 Checking if any servers are running on common ports:"
+            netstat -tlnp 2>/dev/null | grep -E ':(4173|8080|3000|5000)' || echo "No servers found on common ports"
+            
+            exit 1
+          }
+
+          echo "✅ Lighthouse CI completed successfully!"
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          DEBUG: 'lhci:*'
 
   bundle-analysis:
     name: Bundle Analysis
