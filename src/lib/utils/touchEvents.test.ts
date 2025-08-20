@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTouchEventManager } from './touchEvents.js';
-import type { TouchFeedback } from '../types/feedback.js';
 
 describe('touchEvents', () => {
 	beforeEach(() => {

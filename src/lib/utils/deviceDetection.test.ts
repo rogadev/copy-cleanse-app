@@ -81,12 +81,12 @@ describe('deviceDetection', () => {
 
 		it('should handle undefined window gracefully', () => {
 			// This test simulates server-side rendering
-			const originalWindow = (globalThis as any).window;
-			(globalThis as any).window = undefined;
+			const originalWindow = (globalThis as { window?: Window }).window;
+			(globalThis as { window?: Window }).window = undefined;
 
 			expect(detectMobile()).toBe(false);
 
-			(globalThis as any).window = originalWindow;
+			(globalThis as { window?: Window }).window = originalWindow;
 		});
 	});
 

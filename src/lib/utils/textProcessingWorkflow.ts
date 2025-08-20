@@ -3,11 +3,7 @@
  */
 
 import { cleanText, type CleaningResult } from './textCleaner.js';
-import {
-	copyToClipboard,
-	type ClipboardConfig,
-	type ClipboardResult
-} from './clipboardOperations.js';
+import { copyToClipboard, type ClipboardConfig } from './clipboardOperations.js';
 import type { TouchFeedback } from '../types/feedback.js';
 import { FEEDBACK_MESSAGES } from '../types/feedback.js';
 

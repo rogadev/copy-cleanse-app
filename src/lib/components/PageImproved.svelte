@@ -70,7 +70,7 @@
 	}
 
 	function toggleDiff() {
-		showDiff = !showDiff;
+		actions.setShowDiff(!state.showDiff);
 	}
 </script>
 
@@ -150,14 +150,14 @@
 		<!-- Main Interface -->
 		<div class="mt-12 space-y-6">
 			<!-- Mobile Touch Feedback -->
-			{#if isMobile && touchFeedback}
+			{#if state.isMobile && state.touchFeedback}
 				<div
 					class="fixed top-20 right-4 left-4 z-50 sm:right-auto sm:left-1/2 sm:w-96 sm:-translate-x-1/2"
 				>
 					<div class={feedbackClasses}>
 						<div class="flex items-center px-4 py-3">
 							<div class={feedbackIconClasses}>
-								{#if touchFeedback.type === 'success'}
+								{#if state.touchFeedback.type === 'success'}
 									<svg
 										class="h-4 w-4 text-green-600"
 										fill="none"
@@ -171,7 +171,7 @@
 											d="M5 13l4 4L19 7"
 										/>
 									</svg>
-								{:else if touchFeedback.type === 'error'}
+								{:else if state.touchFeedback.type === 'error'}
 									<svg
 										class="h-4 w-4 text-red-600"
 										fill="none"
@@ -185,7 +185,7 @@
 											d="M6 18L18 6M6 6l12 12"
 										/>
 									</svg>
-								{:else if touchFeedback.type === 'processing'}
+								{:else if state.touchFeedback.type === 'processing'}
 									<svg
 										class="h-4 w-4 animate-spin text-blue-600"
 										fill="none"
@@ -202,11 +202,11 @@
 								{/if}
 							</div>
 							<p class={feedbackTextClasses}>
-								{touchFeedback.message}
+								{state.touchFeedback.message}
 							</p>
-							{#if touchFeedback.type !== 'processing'}
+							{#if state.touchFeedback.type !== 'processing'}
 								<button
-									onclick={() => (touchFeedback = null)}
+									onclick={actions.clearFeedback}
 									aria-label="Dismiss notification"
 									class={feedbackButtonClasses}
 								>
@@ -227,7 +227,7 @@
 
 			<!-- Input Section -->
 			<div class="space-y-6">
-				{#if inputMinimized && cleaningResult}
+				{#if state.inputMinimized && state.cleaningResult}
 					<!-- Minimized Input State -->
 					<div class={CARD_CLASSES}>
 						<div class="px-6 py-4">
@@ -253,7 +253,7 @@
 									<div>
 										<h3 class="text-lg font-semibold text-gray-900">Text Processed</h3>
 										<p class="text-sm text-gray-600">
-											{inputText.length} characters • {changeCount}
+											{state.inputText.length} characters • {changeCount}
 											{changeCount === 1 ? 'issue' : 'issues'} found
 										</p>
 									</div>
@@ -287,7 +287,7 @@
 					</div>
 
 					<!-- Visual Comparison View -->
-					{#if showDiff}
+					{#if state.showDiff}
 						<div
 							class="overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-xl backdrop-blur-sm"
 						>
@@ -333,7 +333,11 @@
 											{/if}
 										</div>
 									</div>
-									<button onclick={toggleDiff} class={BUTTON_STYLES.mobileSecondary}>
+									<button
+										onclick={toggleDiff}
+										aria-label="Close comparison view"
+										class={BUTTON_STYLES.mobileSecondary}
+									>
 										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
@@ -349,12 +353,12 @@
 								<div class="rounded-lg border border-amber-200 bg-white p-4">
 									{#if hasChanges}
 										<HighlightedText
-											text={cleaningResult.original}
-											changes={cleaningResult.changes}
+											text={state.cleaningResult.original}
+											changes={state.cleaningResult.changes}
 										/>
 									{:else}
 										<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
-											{cleaningResult.original}
+											{state.cleaningResult.original}
 										</div>
 									{/if}
 								</div>
@@ -391,7 +395,7 @@
 							<div class="relative">
 								<textarea
 									id="input-text"
-									value={inputText}
+									value={state.inputText}
 									oninput={handleInputChange}
 									ontouchstart={actions.handleTouchStart}
 									ontouchend={actions.handleTouchEnd}
@@ -413,24 +417,24 @@
 Just paste your text and you're done!"
 									class="block h-[21.5rem] w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset lg:h-[15.5rem]"
 								></textarea>
-								{#if inputText.length > 0}
+								{#if state.inputText.length > 0}
 									<div class="absolute top-3 right-3">
 										<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-											{inputText.length} chars
+											{state.inputText.length} chars
 										</div>
 									</div>
 								{/if}
 							</div>
 
 							<!-- Mobile Clean Button -->
-							{#if isMobile}
+							{#if state.isMobile}
 								<div class="mt-4 flex flex-col space-y-3">
 									<button
 										onclick={handleMobileClean}
-										disabled={!inputText.trim() || touchFeedback?.type === 'processing'}
+										disabled={!state.inputText.trim() || state.touchFeedback?.type === 'processing'}
 										class={BUTTON_STYLES.mobilePrimary}
 									>
-										{#if touchFeedback?.type === 'processing'}
+										{#if state.touchFeedback?.type === 'processing'}
 											<svg
 												class="h-5 w-5 animate-spin"
 												fill="none"
@@ -458,7 +462,7 @@ Just paste your text and you're done!"
 										{/if}
 									</button>
 
-									{#if !inputText.trim()}
+									{#if !state.inputText.trim()}
 										<p class="text-center text-sm text-gray-500">
 											Enter or paste text above to clean it
 										</p>
@@ -471,10 +475,10 @@ Just paste your text and you're done!"
 			</div>
 
 			<!-- Results Section -->
-			{#if cleaningResult}
+			{#if state.cleaningResult}
 				<div class="space-y-6">
 					<!-- Success Banner -->
-					{#if copySuccess}
+					{#if state.copySuccess}
 						<div
 							class="overflow-hidden rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg"
 						>
@@ -500,11 +504,11 @@ Just paste your text and you're done!"
 											✨ Clean text copied to clipboard!
 										</h3>
 										<p class="text-sm text-green-700">
-											Ready to paste anywhere • {cleaningResult.cleaned.length} characters
+											Ready to paste anywhere • {state.cleaningResult.cleaned.length} characters
 										</p>
 									</div>
 								</div>
-								{#if isMobile}
+								{#if state.isMobile}
 									<button onclick={handleMobileCopy} class={BUTTON_STYLES.mobileSecondary}>
 										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
@@ -546,14 +550,18 @@ Just paste your text and you're done!"
 									<div>
 										<h3 class="text-lg font-semibold text-gray-900">Clean Text</h3>
 										<p class="text-sm text-gray-600">
-											{cleaningResult.cleaned.length} characters • {changeCount}
+											{state.cleaningResult.cleaned.length} characters • {changeCount}
 											{changeCount === 1 ? 'change' : 'changes'} made
 										</p>
 									</div>
 								</div>
 								<div class="flex gap-2">
 									{#if hasChanges}
-										<button onclick={toggleDiff} class={BUTTON_STYLES.mobileSecondary}>
+										<button
+											onclick={toggleDiff}
+											aria-label="Toggle changes view"
+											class={BUTTON_STYLES.mobileSecondary}
+										>
 											<svg
 												class="mr-1 h-4 w-4"
 												fill="none"
@@ -567,7 +575,7 @@ Just paste your text and you're done!"
 													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
 												/>
 											</svg>
-											{showDiff ? 'Hide' : 'Show'} Changes
+											{state.showDiff ? 'Hide' : 'Show'} Changes
 										</button>
 									{/if}
 									<button onclick={handleMobileCopy} class={BUTTON_STYLES.desktopSecondary}>
@@ -588,7 +596,7 @@ Just paste your text and you're done!"
 						<div class="p-6">
 							<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 								<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
-									{cleaningResult.cleaned}
+									{state.cleaningResult.cleaned}
 								</div>
 							</div>
 						</div>

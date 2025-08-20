@@ -2,7 +2,6 @@
 	import { cleanText, type CleaningResult } from '$lib/utils/textCleaner.js';
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
 	import { onMount } from 'svelte';
-	import type { TouchFeedback } from '$lib/types/feedback.js';
 	import { FEEDBACK_MESSAGES, FEEDBACK_STYLES } from '$lib/types/feedback.js';
 	import { createMobileDetector } from '$lib/utils/deviceDetection.js';
 	import { createFeedbackManager } from '$lib/utils/feedbackManager.js';

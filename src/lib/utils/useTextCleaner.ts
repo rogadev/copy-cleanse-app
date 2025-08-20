@@ -34,6 +34,7 @@ export interface TextCleanerActions {
 	handleReset: () => void;
 	handleExpandInput: () => void;
 	setShowDiff: (show: boolean) => void;
+	clearFeedback: () => void;
 	handleTouchStart: () => void;
 	handleTouchEnd: () => void;
 	handleTouchCancel: () => void;
@@ -50,7 +51,7 @@ export function createTextCleaner(): {
 	const mobileDetector = createMobileDetector();
 
 	// State
-	let state: TextCleanerState = $state({
+	const state: TextCleanerState = $state({
 		inputText: '',
 		cleaningResult: null,
 		copySuccess: false,
@@ -109,7 +110,9 @@ export function createTextCleaner(): {
 	);
 
 	// Debounced functions for performance
-	const debouncedClean = debounce(async (autoCopy = false) => {
+	const debouncedClean = debounce(async (...args: unknown[]) => {
+		const autoCopy = args[0] as boolean | undefined;
+		const shouldAutoCopy = autoCopy ?? false;
 		const result = await processText(
 			state.inputText,
 			{
@@ -117,10 +120,10 @@ export function createTextCleaner(): {
 				isMobile: state.isMobile
 			},
 			processingCallbacks,
-			{ autoCopy, minimizeInput: autoCopy }
+			{ autoCopy: shouldAutoCopy, minimizeInput: shouldAutoCopy }
 		);
 
-		if (result && autoCopy) {
+		if (result && shouldAutoCopy) {
 			state.inputMinimized = true;
 		}
 	}, 100);
@@ -180,6 +183,10 @@ export function createTextCleaner(): {
 
 		setShowDiff: (show: boolean) => {
 			state.showDiff = show;
+		},
+
+		clearFeedback: () => {
+			feedbackManager.clear();
 		},
 
 		handleTouchStart: touchEventManager.handleTouchStart,
