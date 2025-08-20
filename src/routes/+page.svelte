@@ -5,7 +5,7 @@
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
 	let showInfo = $state(true);
-	let isProcessing = $state(false);
+
 	let copySuccess = $state(false);
 	let showDiff = $state(false);
 	let inputMinimized = $state(false);
@@ -13,11 +13,9 @@
 	function handleClean(autoCopy = false) {
 		if (!inputText.trim()) return;
 
-		isProcessing = true;
 		// Small delay to show processing state
 		setTimeout(() => {
 			cleaningResult = cleanText(inputText);
-			isProcessing = false;
 			if (autoCopy) {
 				copyCleanText();
 				// Minimize input after auto-clean (on paste)
@@ -482,7 +480,9 @@ Just paste your text and you're done!"
 											<span class="text-gray-600">Dashes & other marks</span>
 										</div>
 										<div class="flex items-center space-x-1">
-											<div class="h-3 w-3 rounded-full border border-purple-300 bg-purple-100"></div>
+											<div
+												class="h-3 w-3 rounded-full border border-purple-300 bg-purple-100"
+											></div>
 											<span class="text-gray-600">AI tracking URLs</span>
 										</div>
 									</div>
@@ -719,7 +719,9 @@ Just paste your text and you're done!"
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
-													<span>AI tracking URL parameters (?source=chatgpt, ?utm_source=openai)</span>
+													<span
+														>AI tracking URL parameters (?source=chatgpt, ?utm_source=openai)</span
+													>
 												</li>
 												<li class="flex items-start space-x-2">
 													<span class="text-gray-400">•</span>
