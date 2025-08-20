@@ -115,6 +115,8 @@ jobs:
 
       - name: Build project
         run: pnpm build
+        env:
+          LIGHTHOUSE_BUILD: true
 
       - name: Run Lighthouse CI
         run: |
