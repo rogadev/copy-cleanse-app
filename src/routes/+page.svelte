@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { cleanText, type CleaningResult } from '$lib/utils/textCleaner.js';
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
+	import { onMount } from 'svelte';
+	import { createMobileDetector } from '$lib/utils/deviceDetection.js';
 
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
@@ -10,30 +12,149 @@
 	let showDiff = $state(false);
 	let inputMinimized = $state(false);
 
+	// Mobile-specific state variables
+	let isMobile = $state(false);
+
+	// === CONSTANTS ===
+	const TIMING = {
+		LONG_PRESS_DELAY: 500
+	} as const;
+
+	const LIMITS = {
+		MAX_CLIPBOARD_SIZE: 1000000, // 1MB limit for safety
+		MOBILE_BREAKPOINT: 768
+	} as const;
+
+	const CARD_CLASSES =
+		'overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm';
+
+	// === UTILITIES ===
+	/**
+	 * Creates a timer utility that ensures only one timer is active at a time
+	 * Automatically clears previous timer when setting a new one
+	 */
+	function createTimer() {
+		let timerId: ReturnType<typeof setTimeout> | null = null;
+
+		const timer = {
+			set: (callback: () => void, delay: number) => {
+				timer.clear();
+				timerId = setTimeout(callback, delay);
+			},
+			clear: () => {
+				if (timerId !== null) {
+					clearTimeout(timerId);
+					timerId = null;
+				}
+			}
+		};
+
+		return timer;
+	}
+
+	const longPressTimer = createTimer();
+
+	// Initialize mobile detection using utility
+	let mobileDetector: ReturnType<typeof createMobileDetector> | null = null;
+
+	onMount(() => {
+		mobileDetector = createMobileDetector();
+	});
+
+	// Reactive mobile state
+	$effect(() => {
+		if (mobileDetector) {
+			isMobile = mobileDetector.isMobile;
+		}
+	});
+
+	// Cleanup on component destroy
+	$effect(() => {
+		return () => {
+			mobileDetector?.cleanup();
+		};
+	});
+
+	// Cleanup timers on component destroy
+	$effect(() => {
+		return () => {
+			longPressTimer.clear();
+		};
+	});
+
 	function handleClean(autoCopy = false) {
 		if (!inputText.trim()) return;
 
-		// Small delay to show processing state
-		setTimeout(() => {
-			cleaningResult = cleanText(inputText);
-			if (autoCopy) {
-				copyCleanText();
-				// Minimize input after auto-clean (on paste)
-				inputMinimized = true;
-			}
-		}, 100);
+		// Process immediately without artificial delay
+		cleaningResult = cleanText(inputText);
+
+		if (autoCopy) {
+			copyCleanText();
+			// Minimize input after auto-clean (on paste)
+			inputMinimized = true;
+		}
 	}
 
 	async function copyCleanText() {
 		if (!cleaningResult) return;
 
 		try {
+			// Check if text is too large (some browsers have limits)
+			const textLength = cleaningResult.cleaned.length;
+
+			if (textLength > LIMITS.MAX_CLIPBOARD_SIZE) {
+				throw new Error('Text too large for clipboard');
+			}
+
 			await navigator.clipboard.writeText(cleaningResult.cleaned);
 			copySuccess = true;
-			// No timeout - success message stays until user resets
 		} catch (err) {
 			console.error('Failed to copy text:', err);
+
+			// Try fallback copy method for older browsers
+			try {
+				await fallbackCopyToClipboard(cleaningResult.cleaned);
+				copySuccess = true;
+			} catch (fallbackErr) {
+				console.error('Fallback copy also failed:', fallbackErr);
+			}
 		}
+	}
+
+	/**
+	 * Fallback clipboard copy method for older browsers that don't support navigator.clipboard
+	 * Uses the deprecated execCommand API as a last resort
+	 * @param text - The text to copy to clipboard
+	 * @throws {Error} When both modern and fallback methods fail
+	 */
+	async function fallbackCopyToClipboard(text: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			// Create a temporary textarea element
+			const textarea = document.createElement('textarea');
+			textarea.value = text;
+			textarea.style.position = 'fixed';
+			textarea.style.left = '-999999px';
+			textarea.style.top = '-999999px';
+			document.body.appendChild(textarea);
+
+			try {
+				textarea.focus();
+				textarea.select();
+
+				// Try to copy using the older execCommand method
+				const successful = document.execCommand('copy');
+				document.body.removeChild(textarea);
+
+				if (successful) {
+					resolve();
+				} else {
+					reject(new Error('execCommand copy failed'));
+				}
+			} catch (err) {
+				document.body.removeChild(textarea);
+				reject(err);
+			}
+		});
 	}
 
 	function reset() {
@@ -42,34 +163,98 @@
 		copySuccess = false;
 		inputMinimized = false;
 		showDiff = false;
-	}
 
-	function handlePaste(event: ClipboardEvent) {
-		const pasted = event.clipboardData?.getData('text');
-		if (!pasted) return;
-		event.preventDefault();
-		inputText = pasted;
-		handleClean(true); // Auto-copy and minimize on paste
-		showDiff = false;
+		// Clear mobile-specific state
+		if (isMobile) {
+			longPressTimer.clear();
+		}
 	}
 
 	function expandInput() {
 		inputMinimized = false;
 	}
 
+	// Touch event handlers for mobile paste detection
+	function handleTouchStart() {
+		if (!isMobile) return;
+
+		// Set up long press detection
+		longPressTimer.set(() => {
+			// Long press functionality without feedback
+		}, TIMING.LONG_PRESS_DELAY);
+	}
+
+	function handleTouchEnd() {
+		if (!isMobile) return;
+
+		longPressTimer.clear();
+
+		// Touch end functionality without feedback
+	}
+
+	function handleTouchCancel() {
+		if (!isMobile) return;
+		longPressTimer.clear();
+	}
+
+	// Enhanced paste handler for mobile
+	function handleMobilePaste(event: ClipboardEvent) {
+		const pasted = event.clipboardData?.getData('text');
+		if (!pasted) return;
+
+		event.preventDefault();
+		inputText = pasted;
+
+		handleClean(true); // Auto-copy and minimize on paste
+		showDiff = false;
+	}
+
+	// Mobile copy button handler
+	async function handleMobileCopy() {
+		if (!cleaningResult) {
+			return;
+		}
+
+		// Use the enhanced copyCleanText function
+		await copyCleanText();
+	}
+
+	// Mobile clean button handler
+	function handleMobileClean() {
+		if (!inputText.trim()) {
+			return;
+		}
+
+		// Use the existing handleClean function with auto-copy enabled
+		handleClean(true);
+		showDiff = false;
+	}
+
 	let changeCount = $derived(cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
+
+	// Button styling configuration
+	const BUTTON_STYLES = {
+		mobilePrimary:
+			'flex w-full items-center justify-center space-x-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 text-base font-medium text-white shadow-lg transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500 min-h-[44px]',
+		mobileSecondary:
+			'flex flex-1 items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none active:scale-95 min-h-[44px]',
+		desktopPrimary:
+			'group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none',
+		desktopSecondary:
+			'group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none'
+	} as const;
 </script>
 
 <svelte:head>
-	<title>AI Text Cleaner - Remove Hidden Markers from Generated Text</title>
+	<title>Copy Cleanse - Remove Hidden Markers from Generated Text</title>
 	<meta
 		name="description"
-		content="Clean AI-generated text by removing hidden whitespace markers and formatting inconsistencies that identify generated content."
+		content="Copy Cleanse - Clean AI-generated text by removing hidden whitespace markers and formatting inconsistencies that identify generated content."
 	/>
 </svelte:head>
 
-<svelte:window onpaste={handlePaste} />
+<svelte:window onpaste={handleMobilePaste} />
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 	<!-- Navigation/Header Bar -->
@@ -89,7 +274,7 @@
 							/>
 						</svg>
 					</div>
-					<span class="text-lg font-semibold text-gray-900">AI Text Cleaner</span>
+					<span class="text-lg font-semibold text-gray-900">Copy Cleanse</span>
 				</div>
 				<div class="hidden items-center space-x-4 text-sm text-gray-600 sm:flex">
 					<span class="flex items-center space-x-1">
@@ -126,7 +311,7 @@
 				<h1
 					class="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl"
 				>
-					AI Text Cleaner
+					Copy Cleanse
 				</h1>
 				<p class="mt-4 text-lg leading-7 text-gray-600">
 					Remove hidden markers and formatting inconsistencies from AI-generated text
@@ -140,9 +325,7 @@
 			<div class="space-y-6">
 				{#if inputMinimized && cleaningResult}
 					<!-- Minimized Input State -->
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
 						<div class="px-6 py-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center space-x-3">
@@ -310,9 +493,7 @@
 					{/if}
 				{:else}
 					<!-- Full Input State -->
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
 						<div class="border-b border-gray-100 px-6 py-4">
 							<div class="flex items-center space-x-3">
 								<div
@@ -341,6 +522,9 @@
 								<textarea
 									id="input-text"
 									bind:value={inputText}
+									ontouchstart={handleTouchStart}
+									ontouchend={handleTouchEnd}
+									ontouchcancel={handleTouchCancel}
 									placeholder="Paste your AI generated text here...
 
 ✨ Auto-processing: Text is automatically cleaned when you paste
@@ -367,6 +551,34 @@ Just paste your text and you're done!"
 									</div>
 								{/if}
 							</div>
+
+							<!-- Mobile Clean Button -->
+							{#if isMobile}
+								<div class="mt-4 flex flex-col space-y-3">
+									<button
+										onclick={() => handleMobileClean()}
+										disabled={!inputText.trim()}
+										class="flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-base font-medium text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500"
+										style="min-height: 44px;"
+									>
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+										<span>Clean Text</span>
+									</button>
+
+									{#if !inputText.trim()}
+										<p class="text-center text-sm text-gray-500">
+											Enter or paste text above to clean it
+										</p>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -406,14 +618,14 @@ Just paste your text and you're done!"
 										</p>
 									</div>
 								</div>
-								<div class="hidden items-center space-x-2 sm:flex">
-									<div class="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1">
-										<svg
-											class="h-4 w-4 text-green-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
+								{#if isMobile}
+									<!-- Mobile copy again button in success banner -->
+									<button
+										onclick={handleMobileCopy}
+										class="flex items-center space-x-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-green-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none active:scale-95"
+										style="min-height: 36px;"
+									>
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
 												stroke-linejoin="round"
@@ -421,16 +633,34 @@ Just paste your text and you're done!"
 												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
 											/>
 										</svg>
-										<span class="text-sm font-medium text-green-700">Copied</span>
+										<span>Copy Again</span>
+									</button>
+								{:else}
+									<!-- Desktop success indicator -->
+									<div class="hidden items-center space-x-2 sm:flex">
+										<div class="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1">
+											<svg
+												class="h-4 w-4 text-green-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+												/>
+											</svg>
+											<span class="text-sm font-medium text-green-700">Copied</span>
+										</div>
 									</div>
-								</div>
+								{/if}
 							</div>
 						</div>
 					{/if}
 
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
 						<div class="border-b border-gray-100 px-6 py-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center space-x-3">
@@ -504,7 +734,7 @@ Just paste your text and you're done!"
 											{/if}
 										</p>
 									</div>
-									<div class="p-4" style="max-height: 40vh; overflow-y: auto;">
+									<div class="max-h-[40vh] overflow-y-auto p-4">
 										{#if hasChanges}
 											<HighlightedText
 												text={cleaningResult.original}
@@ -544,56 +774,112 @@ Just paste your text and you're done!"
 								</div>
 							{/if}
 
-							<!-- Buttons Container - Side by side on desktop, stacked on mobile -->
-							<div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-								<!-- Show/Hide Results Button -->
-								<button
-									onclick={() => (showDiff = !showDiff)}
-									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
-								>
-									<svg
-										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+							<!-- Buttons Container - Mobile-first layout -->
+							{#if isMobile}
+								<!-- Mobile-optimized button layout -->
+								<div class="space-y-4">
+									<!-- Primary Mobile Copy Button -->
+									<button
+										onclick={handleMobileCopy}
+										disabled={!cleaningResult}
+										class={BUTTON_STYLES.mobilePrimary}
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-										/>
-									</svg>
-									<span>{showDiff ? 'Hide' : 'Show'} Results</span>
-								</button>
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+											/>
+										</svg>
+										<span>Copy to Clipboard</span>
+									</button>
 
-								<!-- Copy Again Button -->
-								<button
-									onclick={copyCleanText}
-									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
-								>
-									<svg
-										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+									<!-- Secondary Mobile Actions -->
+									<div class="flex space-x-3">
+										<button
+											onclick={() => (showDiff = !showDiff)}
+											class={BUTTON_STYLES.mobileSecondary}
+										>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+												/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+												/>
+											</svg>
+											<span>{showDiff ? 'Hide' : 'Show'}</span>
+										</button>
+
+										<button onclick={reset} class={BUTTON_STYLES.mobileSecondary}>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+												/>
+											</svg>
+											<span>New</span>
+										</button>
+									</div>
+								</div>
+							{:else}
+								<!-- Desktop button layout -->
+								<div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+									<!-- Show/Hide Results Button -->
+									<button
+										onclick={() => (showDiff = !showDiff)}
+										class={BUTTON_STYLES.desktopPrimary}
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-										/>
-									</svg>
-									<span>Copy Again</span>
-								</button>
-							</div>
+										<svg
+											class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+											/>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+											/>
+										</svg>
+										<span>{showDiff ? 'Hide' : 'Show'} Results</span>
+									</button>
+
+									<!-- Copy Again Button -->
+									<button onclick={copyCleanText} class={BUTTON_STYLES.desktopSecondary}>
+										<svg
+											class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 2z"
+											/>
+										</svg>
+										<span>Copy Again</span>
+									</button>
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -777,9 +1063,7 @@ Just paste your text and you're done!"
 		<!-- Features Section -->
 		<div class="mt-24">
 			<div class="mx-auto max-w-4xl text-center">
-				<h2 class="text-3xl font-bold tracking-tight text-gray-900">
-					Why choose our AI Text Cleaner?
-				</h2>
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900">Why choose Copy Cleanse?</h2>
 				<p class="mt-4 text-lg text-gray-600">
 					Professional-grade text cleaning with privacy and precision in mind
 				</p>
@@ -874,7 +1158,7 @@ Just paste your text and you're done!"
 			<div class="mx-auto max-w-3xl">
 				<p class="text-sm text-gray-500">
 					Built to help identify and remove AI-generated text markers • <a
-						href="https://github.com/rogadev/clean.roga.dev"
+						href="https://github.com/rogadev/copy-cleanse"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="transition-colors duration-200 hover:text-blue-600">Open source</a
@@ -902,7 +1186,7 @@ Just paste your text and you're done!"
 						<span>No downloads required</span>
 					</span>
 					<a
-						href="https://github.com/rogadev/clean.roga.dev"
+						href="https://github.com/rogadev/copy-cleanse"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="flex items-center space-x-1 transition-colors duration-200 hover:text-blue-400"

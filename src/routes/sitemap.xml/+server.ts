@@ -1,7 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 
 // Your site's base URL - update this to match your domain
-const SITE_URL = 'https://clean.roga.dev';
+const SITE_URL = 'https://copycleanse.com';
 
 // Define your static routes here
 const staticRoutes = [
