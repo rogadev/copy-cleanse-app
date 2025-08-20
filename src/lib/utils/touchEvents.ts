@@ -5,9 +5,6 @@
  * and mobile-specific touch interactions with automatic timer management.
  */
 
-import type { TouchFeedback } from '../types/feedback.js';
-import { FEEDBACK_MESSAGES } from '../types/feedback.js';
-
 /**
  * Configuration options for touch event behavior
  */
@@ -38,7 +35,7 @@ export const DEFAULT_TOUCH_CONFIG: TouchEventConfig = {
  */
 export interface TouchEventHandlers {
 	/** Called when a long press is detected */
-	onLongPress: (feedback: TouchFeedback) => void;
+	onLongPress: () => void;
 	/** Called when touch interaction ends (always called) */
 	onTouchEnd: () => void;
 	/** Called when a short tap is detected (optional) */
@@ -100,15 +97,9 @@ export function createTouchEventManager(
 
 		// Set up long press detection
 		longPressTimer = window.setTimeout(() => {
-			const feedback: TouchFeedback = {
-				message: FEEDBACK_MESSAGES.LONG_PRESS,
-				type: 'info',
-				id: 'long-press'
-			};
+			handlers.onLongPress();
 
-			handlers.onLongPress(feedback);
-
-			// Clear feedback after specified duration
+			// Clear after specified duration
 			feedbackTimer = window.setTimeout(() => {
 				handlers.onTouchEnd();
 			}, finalConfig.feedbackDuration);

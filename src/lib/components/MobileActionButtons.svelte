@@ -1,18 +1,15 @@
 <script lang="ts">
-	import type { FeedbackType } from '../types/feedback.js';
-
 	import type { CleaningResult } from '$lib/utils/textCleaner.js';
 
 	interface Props {
 		cleaningResult: CleaningResult | null;
-		touchFeedback: { message: string; type: FeedbackType; id?: string } | null;
 		showDiff: boolean;
 		onCopy: () => Promise<void>;
 		onToggleDiff: () => void;
 		onReset: () => void;
 	}
 
-	let { cleaningResult, touchFeedback, showDiff, onCopy, onToggleDiff, onReset }: Props = $props();
+	let { cleaningResult, showDiff, onCopy, onToggleDiff, onReset }: Props = $props();
 
 	const BUTTON_STYLES = {
 		primary:
@@ -24,32 +21,16 @@
 
 <div class="space-y-4">
 	<!-- Primary Mobile Copy Button -->
-	<button
-		onclick={onCopy}
-		disabled={!cleaningResult || touchFeedback?.type === 'processing'}
-		class={BUTTON_STYLES.primary}
-	>
-		{#if touchFeedback?.type === 'processing'}
-			<svg class="h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-				/>
-			</svg>
-			<span>Copying...</span>
-		{:else}
-			<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-				/>
-			</svg>
-			<span>Copy to Clipboard</span>
-		{/if}
+	<button onclick={onCopy} disabled={!cleaningResult} class={BUTTON_STYLES.primary}>
+		<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+			/>
+		</svg>
+		<span>Copy to Clipboard</span>
 	</button>
 
 	<!-- Secondary Mobile Actions -->

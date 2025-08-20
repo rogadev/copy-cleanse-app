@@ -1,7 +1,6 @@
 <script lang="ts">
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
 	import { onMount } from 'svelte';
-	import { FEEDBACK_STYLES } from '$lib/types/feedback.js';
 	import { CARD_CLASSES, BUTTON_STYLES } from '$lib/constants/ui.js';
 	import { createTextCleaner } from '$lib/utils/useTextCleaner.js';
 
@@ -11,32 +10,6 @@
 	// Computed values - access state directly for reactivity
 	let changeCount = $derived(state.cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
-
-	// Computed classes for feedback styling
-	const feedbackClasses = $derived(() => {
-		if (!state.touchFeedback) return '';
-		const baseClasses = 'overflow-hidden rounded-lg border shadow-lg backdrop-blur-sm';
-		const styles = FEEDBACK_STYLES[state.touchFeedback.type];
-		return `${baseClasses} ${styles.container}`;
-	});
-
-	const feedbackIconClasses = $derived(() => {
-		if (!state.touchFeedback) return '';
-		const styles = FEEDBACK_STYLES[state.touchFeedback.type];
-		return `flex h-8 w-8 items-center justify-center rounded-full ${styles.icon}`;
-	});
-
-	const feedbackTextClasses = $derived(() => {
-		if (!state.touchFeedback) return '';
-		const styles = FEEDBACK_STYLES[state.touchFeedback.type];
-		return `ml-3 text-sm font-medium ${styles.text}`;
-	});
-
-	const feedbackButtonClasses = $derived(() => {
-		if (!state.touchFeedback) return '';
-		const styles = FEEDBACK_STYLES[state.touchFeedback.type];
-		return `ml-auto flex h-6 w-6 items-center justify-center rounded-full ${styles.button}`;
-	});
 
 	// Cleanup on component destroy
 	onMount(() => {
@@ -149,82 +122,6 @@
 
 		<!-- Main Interface -->
 		<div class="mt-12 space-y-6">
-			<!-- Mobile Touch Feedback -->
-			{#if state.isMobile && state.touchFeedback}
-				<div
-					class="fixed top-20 right-4 left-4 z-50 sm:right-auto sm:left-1/2 sm:w-96 sm:-translate-x-1/2"
-				>
-					<div class={feedbackClasses}>
-						<div class="flex items-center px-4 py-3">
-							<div class={feedbackIconClasses}>
-								{#if state.touchFeedback.type === 'success'}
-									<svg
-										class="h-4 w-4 text-green-600"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M5 13l4 4L19 7"
-										/>
-									</svg>
-								{:else if state.touchFeedback.type === 'error'}
-									<svg
-										class="h-4 w-4 text-red-600"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M6 18L18 6M6 6l12 12"
-										/>
-									</svg>
-								{:else if state.touchFeedback.type === 'processing'}
-									<svg
-										class="h-4 w-4 animate-spin text-blue-600"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-										/>
-									</svg>
-								{/if}
-							</div>
-							<p class={feedbackTextClasses}>
-								{state.touchFeedback.message}
-							</p>
-							{#if state.touchFeedback.type !== 'processing'}
-								<button
-									onclick={actions.clearFeedback}
-									aria-label="Dismiss notification"
-									class={feedbackButtonClasses}
-								>
-									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M6 18L18 6M6 6l12 12"
-										/>
-									</svg>
-								</button>
-							{/if}
-						</div>
-					</div>
-				</div>
-			{/if}
-
 			<!-- Input Section -->
 			<div class="space-y-6">
 				{#if state.inputMinimized && state.cleaningResult}
@@ -253,7 +150,7 @@
 									<div>
 										<h3 class="text-lg font-semibold text-gray-900">Text Processed</h3>
 										<p class="text-sm text-gray-600">
-											{state.inputText.length} characters • {changeCount}
+											{changeCount}
 											{changeCount === 1 ? 'issue' : 'issues'} found
 										</p>
 									</div>
@@ -431,35 +328,18 @@ Just paste your text and you're done!"
 								<div class="mt-4 flex flex-col space-y-3">
 									<button
 										onclick={handleMobileClean}
-										disabled={!state.inputText.trim() || state.touchFeedback?.type === 'processing'}
+										disabled={!state.inputText.trim()}
 										class={BUTTON_STYLES.mobilePrimary}
 									>
-										{#if state.touchFeedback?.type === 'processing'}
-											<svg
-												class="h-5 w-5 animate-spin"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-												/>
-											</svg>
-											<span>Processing...</span>
-										{:else}
-											<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-												/>
-											</svg>
-											<span>Clean Text</span>
-										{/if}
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+										<span>Clean Text</span>
 									</button>
 
 									{#if !state.inputText.trim()}

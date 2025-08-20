@@ -4,20 +4,13 @@
 
 import { cleanText, type CleaningResult } from './textCleaner.js';
 import { copyToClipboard, type ClipboardConfig } from './clipboardOperations.js';
-import type { TouchFeedback } from '../types/feedback.js';
-import { FEEDBACK_MESSAGES } from '../types/feedback.js';
 
 export interface ProcessingConfig {
 	clipboard: ClipboardConfig;
-	isMobile: boolean;
 }
 
 export interface ProcessingCallbacks {
-	onProcessingStart: (feedback: TouchFeedback) => void;
 	onProcessingComplete: (result: CleaningResult) => void;
-	onCopySuccess: (feedback: TouchFeedback) => void;
-	onCopyError: (feedback: TouchFeedback) => void;
-	onValidationError: (feedback: TouchFeedback) => void;
 }
 
 export interface ProcessingOptions {
@@ -36,21 +29,7 @@ export async function processText(
 ): Promise<CleaningResult | null> {
 	// Validation
 	if (!inputText.trim()) {
-		if (config.isMobile) {
-			callbacks.onValidationError({
-				message: FEEDBACK_MESSAGES.EMPTY_TEXT,
-				type: 'error'
-			});
-		}
 		return null;
-	}
-
-	// Show processing feedback for mobile
-	if (config.isMobile) {
-		callbacks.onProcessingStart({
-			message: options.autoCopy ? FEEDBACK_MESSAGES.PROCESSING : FEEDBACK_MESSAGES.CLEANING,
-			type: 'processing'
-		});
 	}
 
 	// Process the text
@@ -59,23 +38,7 @@ export async function processText(
 
 	// Auto-copy if requested
 	if (options.autoCopy) {
-		const clipboardResult = await copyToClipboard(result.cleaned, config.clipboard);
-
-		if (clipboardResult.success) {
-			if (config.isMobile) {
-				callbacks.onCopySuccess({
-					message: FEEDBACK_MESSAGES.SUCCESS,
-					type: 'success'
-				});
-			}
-		} else {
-			if (config.isMobile) {
-				callbacks.onCopyError({
-					message: clipboardResult.error || FEEDBACK_MESSAGES.ERROR,
-					type: 'error'
-				});
-			}
-		}
+		await copyToClipboard(result.cleaned, config.clipboard);
 	}
 
 	return result;
@@ -93,14 +56,6 @@ export async function handlePasteEvent(
 
 	if (!pastedText) {
 		return { text: '', result: null };
-	}
-
-	// Show paste feedback for mobile
-	if (config.isMobile) {
-		callbacks.onProcessingStart({
-			message: FEEDBACK_MESSAGES.PASTE_SUCCESS,
-			type: 'processing'
-		});
 	}
 
 	// Process with auto-copy enabled

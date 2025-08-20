@@ -43,11 +43,7 @@ describe('touchEvents', () => {
 			manager.handleTouchStart();
 			vi.advanceTimersByTime(500);
 
-			expect(mockHandlers.onLongPress).toHaveBeenCalledWith({
-				message: 'Long press detected - paste available',
-				type: 'info',
-				id: 'long-press'
-			});
+			expect(mockHandlers.onLongPress).toHaveBeenCalledWith();
 		});
 
 		it('should not trigger long press if touch ends early', () => {

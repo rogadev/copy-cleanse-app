@@ -2,7 +2,6 @@
  * Main text cleaner hook that combines all utilities
  */
 
-import { createFeedbackManager } from './feedbackManager.js';
 import { createMobileDetector } from './deviceDetection.js';
 import { createTouchEventManager, type TouchEventHandlers } from './touchEvents.js';
 import {
@@ -13,9 +12,7 @@ import {
 import { copyToClipboard } from './clipboardOperations.js';
 import { debounce } from './debounce.js';
 import type { CleaningResult } from './textCleaner.js';
-import type { TouchFeedback } from '../types/feedback.js';
 import { TIMING, LIMITS } from '../constants/ui.js';
-import { FEEDBACK_MESSAGES } from '../types/feedback.js';
 
 export interface TextCleanerState {
 	inputText: string;
@@ -24,7 +21,6 @@ export interface TextCleanerState {
 	showDiff: boolean;
 	inputMinimized: boolean;
 	isMobile: boolean;
-	touchFeedback: TouchFeedback | null;
 }
 
 export interface TextCleanerActions {
@@ -34,7 +30,6 @@ export interface TextCleanerActions {
 	handleReset: () => void;
 	handleExpandInput: () => void;
 	setShowDiff: (show: boolean) => void;
-	clearFeedback: () => void;
 	handleTouchStart: () => void;
 	handleTouchEnd: () => void;
 	handleTouchCancel: () => void;
@@ -47,7 +42,6 @@ export function createTextCleaner(): {
 	actions: TextCleanerActions;
 } {
 	// Initialize managers
-	const feedbackManager = createFeedbackManager();
 	const mobileDetector = createMobileDetector();
 
 	// State
@@ -57,8 +51,7 @@ export function createTextCleaner(): {
 		copySuccess: false,
 		showDiff: false,
 		inputMinimized: false,
-		isMobile: false,
-		touchFeedback: null
+		isMobile: false
 	});
 
 	// Update mobile state reactively
@@ -66,38 +59,20 @@ export function createTextCleaner(): {
 		state.isMobile = mobileDetector.isMobile;
 	});
 
-	// Update feedback state reactively
-	$effect(() => {
-		state.touchFeedback = feedbackManager.current;
-	});
-
 	// Processing callbacks
 	const processingCallbacks: ProcessingCallbacks = {
-		onProcessingStart: (feedback) =>
-			feedbackManager.show(feedback.message, feedback.type, feedback.id),
 		onProcessingComplete: (result) => {
 			state.cleaningResult = result;
-			feedbackManager.clear();
-		},
-		onCopySuccess: (feedback) => {
-			state.copySuccess = true;
-			feedbackManager.show(feedback.message, feedback.type, feedback.id);
-		},
-		onCopyError: (feedback) => {
-			feedbackManager.show(feedback.message, feedback.type, feedback.id);
-		},
-		onValidationError: (feedback) => {
-			feedbackManager.show(feedback.message, feedback.type, feedback.id);
 		}
 	};
 
 	// Touch event handlers
 	const touchHandlers: TouchEventHandlers = {
-		onLongPress: (feedback) => feedbackManager.show(feedback.message, feedback.type, feedback.id),
+		onLongPress: () => {
+			// Long press functionality without feedback
+		},
 		onTouchEnd: () => {
-			if (state.touchFeedback?.id === 'long-press') {
-				feedbackManager.clearById('long-press');
-			}
+			// Touch end functionality without feedback
 		}
 	};
 
@@ -116,8 +91,7 @@ export function createTextCleaner(): {
 		const result = await processText(
 			state.inputText,
 			{
-				clipboard: { maxSize: LIMITS.MAX_CLIPBOARD_SIZE },
-				isMobile: state.isMobile
+				clipboard: { maxSize: LIMITS.MAX_CLIPBOARD_SIZE }
 			},
 			processingCallbacks,
 			{ autoCopy: shouldAutoCopy, minimizeInput: shouldAutoCopy }
@@ -141,14 +115,7 @@ export function createTextCleaner(): {
 
 		handleCopy: async () => {
 			if (!state.cleaningResult) {
-				if (state.isMobile) {
-					feedbackManager.show('No text to copy', 'error');
-				}
 				return;
-			}
-
-			if (state.isMobile) {
-				feedbackManager.show('Copying to clipboard...', 'processing');
 			}
 
 			const result = await copyToClipboard(state.cleaningResult.cleaned, {
@@ -157,13 +124,6 @@ export function createTextCleaner(): {
 
 			if (result.success) {
 				state.copySuccess = true;
-				if (state.isMobile) {
-					feedbackManager.show(FEEDBACK_MESSAGES.SUCCESS, 'success');
-				}
-			} else {
-				if (state.isMobile) {
-					feedbackManager.show(result.error || FEEDBACK_MESSAGES.ERROR, 'error');
-				}
 			}
 		},
 
@@ -173,7 +133,6 @@ export function createTextCleaner(): {
 			state.copySuccess = false;
 			state.inputMinimized = false;
 			state.showDiff = false;
-			feedbackManager.clear();
 			touchEventManager.cleanup();
 		},
 
@@ -183,10 +142,6 @@ export function createTextCleaner(): {
 
 		setShowDiff: (show: boolean) => {
 			state.showDiff = show;
-		},
-
-		clearFeedback: () => {
-			feedbackManager.clear();
 		},
 
 		handleTouchStart: touchEventManager.handleTouchStart,
@@ -199,8 +154,7 @@ export function createTextCleaner(): {
 			const { text, result } = await handlePasteEvent(
 				event,
 				{
-					clipboard: { maxSize: LIMITS.MAX_CLIPBOARD_SIZE },
-					isMobile: state.isMobile
+					clipboard: { maxSize: LIMITS.MAX_CLIPBOARD_SIZE }
 				},
 				processingCallbacks
 			);
@@ -215,7 +169,6 @@ export function createTextCleaner(): {
 		},
 
 		cleanup: () => {
-			feedbackManager.cleanup();
 			mobileDetector.cleanup();
 			touchEventManager.cleanup();
 		}
