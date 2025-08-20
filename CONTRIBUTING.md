@@ -1,6 +1,6 @@
-# Contributing to AI Text Cleaner
+# Contributing to Copy Cleanse
 
-Thank you for your interest in contributing to AI Text Cleaner! 🎉 We welcome contributions from developers of all skill levels.
+Thank you for your interest in contributing to Copy Cleanse! 🎉 We welcome contributions from developers of all skill levels.
 
 ## 📋 Table of Contents
 
@@ -35,7 +35,7 @@ We welcome several types of contributions:
 
 ### Before You Start
 
-1. Check if there's already an [issue](https://github.com/rogadev/clean.roga.dev/issues) for what you want to work on
+1. Check if there's already an [issue](https://github.com/rogadev/copy-cleanse/issues) for what you want to work on
 2. If not, create an issue to discuss your proposed changes
 3. Wait for maintainer feedback before starting work on large changes
 
@@ -44,8 +44,8 @@ We welcome several types of contributions:
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/your-username/clean.roga.dev.git
-   cd clean.roga.dev
+   git clone https://github.com/your-username/copy-cleanse.git
+   cd copy-cleanse
    ```
 3. **Install dependencies**:
    ```bash
@@ -223,8 +223,8 @@ Future: We plan to add automated testing. Contributions welcome!
 
 ## Questions?
 
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/rogadev/clean.roga.dev/discussions)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/rogadev/clean.roga.dev/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/rogadev/copy-cleanse/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/rogadev/copy-cleanse/issues)
 
 ## Recognition
 

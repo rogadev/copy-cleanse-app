@@ -16,7 +16,7 @@ export function detectMobile(): boolean {
 }
 
 export function createMobileDetector() {
-	let isMobile = $state(false);
+	let isMobile = false;
 
 	function updateMobileState() {
 		isMobile = detectMobile();

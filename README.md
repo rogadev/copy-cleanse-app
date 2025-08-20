@@ -1,14 +1,14 @@
-# AI Text Cleaner
+# Copy Cleanse
 
 Remove hidden markers and formatting inconsistencies from AI-generated text with this privacy-first, browser-based tool.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-clean.roga.dev-blue?style=for-the-badge)](https://clean.roga.dev)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-copycleanse.com-blue?style=for-the-badge)](https://copycleanse.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Built with SvelteKit](https://img.shields.io/badge/Built%20with-SvelteKit-orange?style=for-the-badge)](https://kit.svelte.dev/)
 
 ## 🎯 What it does
 
-AI Text Cleaner detects and removes:
+Copy Cleanse detects and removes:
 
 - Hidden whitespace characters (zero-width spaces, non-breaking spaces)
 - Em dashes (—) that may identify AI-generated content
@@ -32,8 +32,8 @@ AI Text Cleaner detects and removes:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/rogadev/clean.roga.dev.git
-   cd clean.roga.dev
+   git clone https://github.com/rogadev/copy-cleanse.git
+   cd copy-cleanse
    ```
 
 2. **Install dependencies**
@@ -88,7 +88,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 🐛 Reporting Issues
 
-Found a bug? Please [open an issue](https://github.com/rogadev/clean.roga.dev/issues) with:
+Found a bug? Please [open an issue](https://github.com/rogadev/copy-cleanse/issues) with:
 
 - A clear description of the problem
 - Steps to reproduce
@@ -107,9 +107,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 🌐 **Website**: [clean.roga.dev](https://clean.roga.dev)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/rogadev/clean.roga.dev/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/rogadev/clean.roga.dev/discussions)
+- 🌐 **Website**: [copycleanse.com](https://copycleanse.com)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/rogadev/copy-cleanse/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/rogadev/copy-cleanse/discussions)
 
 ---
 

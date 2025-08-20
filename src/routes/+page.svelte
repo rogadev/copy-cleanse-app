@@ -4,6 +4,8 @@
 	import { onMount } from 'svelte';
 	import type { TouchFeedback } from '$lib/types/feedback.js';
 	import { FEEDBACK_MESSAGES, FEEDBACK_STYLES } from '$lib/types/feedback.js';
+	import { createMobileDetector } from '$lib/utils/deviceDetection.js';
+	import { createFeedbackManager } from '$lib/utils/feedbackManager.js';
 
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
@@ -15,8 +17,11 @@
 
 	// Mobile-specific state variables
 	let isMobile = $state(false);
-	let touchFeedback = $state<TouchFeedback | null>(null);
 	let touchStartTime = $state(0);
+
+	// Initialize feedback manager
+	const feedbackManager = createFeedbackManager();
+	let touchFeedback = $derived(feedbackManager.current);
 
 	// === CONSTANTS ===
 	const TIMING = {
@@ -61,41 +66,24 @@
 	const longPressTimer = createTimer();
 	const feedbackTimer = createTimer();
 
-	// Mobile detection utility function with better device detection
-	function detectMobile(): boolean {
-		if (typeof window === 'undefined') return false;
+	// Initialize mobile detection using utility
+	let mobileDetector: ReturnType<typeof createMobileDetector> | null = null;
 
-		// Check for mobile user agents
-		const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-		const isMobileUserAgent = mobileRegex.test(navigator.userAgent);
-
-		// Check for touch capability
-		const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-		// Check screen size (mobile-first breakpoint)
-		const isSmallScreen = window.innerWidth <= LIMITS.MOBILE_BREAKPOINT;
-
-		// Mobile if user agent indicates mobile OR (touch device AND small screen)
-		return isMobileUserAgent || (isTouchDevice && isSmallScreen);
-	}
-
-	// Initialize mobile detection
 	onMount(() => {
-		isMobile = detectMobile();
+		mobileDetector = createMobileDetector();
 	});
 
-	// Handle mobile detection on resize/orientation change
+	// Reactive mobile state
 	$effect(() => {
-		const handleResize = () => {
-			isMobile = detectMobile();
-		};
+		if (mobileDetector) {
+			isMobile = mobileDetector.isMobile;
+		}
+	});
 
-		window.addEventListener('resize', handleResize);
-		window.addEventListener('orientationchange', handleResize);
-
+	// Cleanup on component destroy
+	$effect(() => {
 		return () => {
-			window.removeEventListener('resize', handleResize);
-			window.removeEventListener('orientationchange', handleResize);
+			mobileDetector?.cleanup();
 		};
 	});
 
@@ -385,10 +373,10 @@
 </script>
 
 <svelte:head>
-	<title>AI Text Cleaner - Remove Hidden Markers from Generated Text</title>
+	<title>Copy Cleanse - Remove Hidden Markers from Generated Text</title>
 	<meta
 		name="description"
-		content="Clean AI-generated text by removing hidden whitespace markers and formatting inconsistencies that identify generated content."
+		content="Copy Cleanse - Clean AI-generated text by removing hidden whitespace markers and formatting inconsistencies that identify generated content."
 	/>
 </svelte:head>
 
@@ -412,7 +400,7 @@
 							/>
 						</svg>
 					</div>
-					<span class="text-lg font-semibold text-gray-900">AI Text Cleaner</span>
+					<span class="text-lg font-semibold text-gray-900">Copy Cleanse</span>
 				</div>
 				<div class="hidden items-center space-x-4 text-sm text-gray-600 sm:flex">
 					<span class="flex items-center space-x-1">
@@ -449,7 +437,7 @@
 				<h1
 					class="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl"
 				>
-					AI Text Cleaner
+					Copy Cleanse
 				</h1>
 				<p class="mt-4 text-lg leading-7 text-gray-600">
 					Remove hidden markers and formatting inconsistencies from AI-generated text
@@ -1313,9 +1301,7 @@ Just paste your text and you're done!"
 		<!-- Features Section -->
 		<div class="mt-24">
 			<div class="mx-auto max-w-4xl text-center">
-				<h2 class="text-3xl font-bold tracking-tight text-gray-900">
-					Why choose our AI Text Cleaner?
-				</h2>
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900">Why choose Copy Cleanse?</h2>
 				<p class="mt-4 text-lg text-gray-600">
 					Professional-grade text cleaning with privacy and precision in mind
 				</p>
@@ -1410,7 +1396,7 @@ Just paste your text and you're done!"
 			<div class="mx-auto max-w-3xl">
 				<p class="text-sm text-gray-500">
 					Built to help identify and remove AI-generated text markers • <a
-						href="https://github.com/rogadev/clean.roga.dev"
+						href="https://github.com/rogadev/copy-cleanse"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="transition-colors duration-200 hover:text-blue-600">Open source</a
@@ -1438,7 +1424,7 @@ Just paste your text and you're done!"
 						<span>No downloads required</span>
 					</span>
 					<a
-						href="https://github.com/rogadev/clean.roga.dev"
+						href="https://github.com/rogadev/copy-cleanse"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="flex items-center space-x-1 transition-colors duration-200 hover:text-blue-400"

@@ -2,24 +2,13 @@
  * Mobile feedback management utility
  */
 
-export type FeedbackType = 'success' | 'error' | 'processing' | 'info';
+import type { FeedbackType, TouchFeedback } from '../types/feedback.js';
 
-export interface FeedbackMessage {
-	message: string;
-	type: FeedbackType;
-	id?: string;
-}
-
-export const FEEDBACK_MESSAGES = {
-	LONG_PRESS: 'Long press detected - paste available',
-	PROCESSING: 'Processing text...',
-	SUCCESS: 'Copied to clipboard!',
-	ERROR: 'Copy failed. Try manual copy button.',
-	PASTE_SUCCESS: 'Text pasted - cleaning automatically...'
-} as const;
+// Re-export feedback messages from types
+export { FEEDBACK_MESSAGES } from '../types/feedback.js';
 
 export function createFeedbackManager() {
-	let feedback = $state<FeedbackMessage | null>(null);
+	let feedback: TouchFeedback | null = null;
 	let timer: number | null = null;
 
 	function show(message: string, type: FeedbackType, id?: string) {
