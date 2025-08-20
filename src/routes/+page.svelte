@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cleanText, type CleaningResult } from '$lib/utils/textCleaner.js';
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
+	import { onMount } from 'svelte';
 
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
@@ -10,30 +11,229 @@
 	let showDiff = $state(false);
 	let inputMinimized = $state(false);
 
+	// Mobile-specific state variables
+	let isMobile = $state(false);
+	type FeedbackType = 'success' | 'error' | 'processing' | 'info';
+	let touchFeedback = $state<{ message: string; type: FeedbackType; id?: string } | null>(null);
+	let touchStartTime = $state(0);
+
+	// === CONSTANTS ===
+	const TIMING = {
+		LONG_PRESS_DELAY: 500,
+		SUCCESS_FEEDBACK_DURATION: 3000,
+		ERROR_FEEDBACK_DURATION: 5000,
+		LONG_PRESS_FEEDBACK_DURATION: 2000
+	} as const;
+
+	const FEEDBACK_MESSAGES = {
+		SUCCESS: 'Copied to clipboard!',
+		ERROR: 'Copy failed. Try manual copy button.',
+		PROCESSING: 'Processing text...',
+		PASTE_SUCCESS: 'Text pasted - cleaning automatically...',
+		LONG_PRESS: 'Long press detected - paste available',
+		EMPTY_TEXT: 'Please enter some text to clean',
+		CLEANING: 'Cleaning text...',
+		CLIPBOARD_LARGE: 'Text too large for clipboard. Use manual copy.',
+		CLIPBOARD_PERMISSION: 'Clipboard access denied. Use manual copy button.'
+	} as const;
+
+	const CARD_CLASSES =
+		'overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm';
+
+	// === UTILITIES ===
+	/**
+	 * Creates a timer utility that ensures only one timer is active at a time
+	 * Automatically clears previous timer when setting a new one
+	 */
+	function createTimer() {
+		let timerId: ReturnType<typeof setTimeout> | null = null;
+
+		const timer = {
+			set: (callback: () => void, delay: number) => {
+				timer.clear();
+				timerId = setTimeout(callback, delay);
+			},
+			clear: () => {
+				if (timerId !== null) {
+					clearTimeout(timerId);
+					timerId = null;
+				}
+			}
+		};
+
+		return timer;
+	}
+
+	const longPressTimer = createTimer();
+	const feedbackTimer = createTimer();
+
+	// Mobile detection utility function with better device detection
+	function detectMobile(): boolean {
+		if (typeof window === 'undefined') return false;
+
+		// Check for mobile user agents
+		const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+		const isMobileUserAgent = mobileRegex.test(navigator.userAgent);
+
+		// Check for touch capability
+		const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+		// Check screen size (mobile-first breakpoint)
+		const isSmallScreen = window.innerWidth <= 768;
+
+		// Mobile if user agent indicates mobile OR (touch device AND small screen)
+		return isMobileUserAgent || (isTouchDevice && isSmallScreen);
+	}
+
+	// Initialize mobile detection
+	onMount(() => {
+		isMobile = detectMobile();
+	});
+
+	// Handle mobile detection on resize/orientation change
+	$effect(() => {
+		const handleResize = () => {
+			isMobile = detectMobile();
+		};
+
+		window.addEventListener('resize', handleResize);
+		window.addEventListener('orientationchange', handleResize);
+
+		return () => {
+			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('orientationchange', handleResize);
+		};
+	});
+
+	// Auto-clear feedback messages based on type
+	$effect(() => {
+		if (touchFeedback?.type === 'success') {
+			feedbackTimer.set(() => (touchFeedback = null), TIMING.SUCCESS_FEEDBACK_DURATION);
+		} else if (touchFeedback?.type === 'error') {
+			feedbackTimer.set(() => (touchFeedback = null), TIMING.ERROR_FEEDBACK_DURATION);
+		}
+	});
+
+	// Cleanup timers on component destroy
+	$effect(() => {
+		return () => {
+			longPressTimer.clear();
+			feedbackTimer.clear();
+		};
+	});
+
 	function handleClean(autoCopy = false) {
 		if (!inputText.trim()) return;
 
-		// Small delay to show processing state
-		setTimeout(() => {
-			cleaningResult = cleanText(inputText);
-			if (autoCopy) {
-				copyCleanText();
-				// Minimize input after auto-clean (on paste)
-				inputMinimized = true;
-			}
-		}, 100);
+		// Set processing state for mobile feedback
+		if (isMobile) {
+			touchFeedback = { message: FEEDBACK_MESSAGES.PROCESSING, type: 'processing' };
+		}
+
+		// Process immediately without artificial delay
+		cleaningResult = cleanText(inputText);
+
+		// Clear processing state
+		if (isMobile) {
+			touchFeedback = null;
+		}
+
+		if (autoCopy) {
+			copyCleanText();
+			// Minimize input after auto-clean (on paste)
+			inputMinimized = true;
+		}
 	}
 
 	async function copyCleanText() {
 		if (!cleaningResult) return;
 
 		try {
+			// Check if text is too large (some browsers have limits)
+			const textLength = cleaningResult.cleaned.length;
+			const maxClipboardSize = 1000000; // 1MB limit for safety
+
+			if (textLength > maxClipboardSize) {
+				throw new Error('Text too large for clipboard');
+			}
+
 			await navigator.clipboard.writeText(cleaningResult.cleaned);
 			copySuccess = true;
-			// No timeout - success message stays until user resets
+
+			// Mobile-specific feedback (timer handled by $effect)
+			if (isMobile) {
+				touchFeedback = { message: FEEDBACK_MESSAGES.SUCCESS, type: 'success' };
+			}
 		} catch (err) {
 			console.error('Failed to copy text:', err);
+
+			// Determine specific error type for better user feedback
+			let errorMessage: string = FEEDBACK_MESSAGES.ERROR;
+
+			if (err instanceof Error) {
+				if (err.message.includes('too large')) {
+					errorMessage = FEEDBACK_MESSAGES.CLIPBOARD_LARGE;
+				} else if (err.name === 'NotAllowedError' || err.message.includes('permission')) {
+					errorMessage = FEEDBACK_MESSAGES.CLIPBOARD_PERMISSION;
+				}
+			} else if (err instanceof DOMException && err.name === 'NotAllowedError') {
+				errorMessage = FEEDBACK_MESSAGES.CLIPBOARD_PERMISSION;
+			}
+
+			// Mobile-specific error feedback (timer handled by $effect)
+			if (isMobile) {
+				touchFeedback = { message: errorMessage, type: 'error' };
+			}
+
+			// Try fallback copy method for older browsers
+			try {
+				await fallbackCopyToClipboard(cleaningResult.cleaned);
+				copySuccess = true;
+
+				if (isMobile) {
+					touchFeedback = { message: FEEDBACK_MESSAGES.SUCCESS, type: 'success' };
+				}
+			} catch (fallbackErr) {
+				console.error('Fallback copy also failed:', fallbackErr);
+				// Error message already set above
+			}
 		}
+	}
+
+	/**
+	 * Fallback clipboard copy method for older browsers that don't support navigator.clipboard
+	 * Uses the deprecated execCommand API as a last resort
+	 * @param text - The text to copy to clipboard
+	 * @throws {Error} When both modern and fallback methods fail
+	 */
+	async function fallbackCopyToClipboard(text: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			// Create a temporary textarea element
+			const textarea = document.createElement('textarea');
+			textarea.value = text;
+			textarea.style.position = 'fixed';
+			textarea.style.left = '-999999px';
+			textarea.style.top = '-999999px';
+			document.body.appendChild(textarea);
+
+			try {
+				textarea.focus();
+				textarea.select();
+
+				// Try to copy using the older execCommand method
+				const successful = document.execCommand('copy');
+				document.body.removeChild(textarea);
+
+				if (successful) {
+					resolve();
+				} else {
+					reject(new Error('execCommand copy failed'));
+				}
+			} catch (err) {
+				document.body.removeChild(textarea);
+				reject(err);
+			}
+		});
 	}
 
 	function reset() {
@@ -42,23 +242,150 @@
 		copySuccess = false;
 		inputMinimized = false;
 		showDiff = false;
-	}
 
-	function handlePaste(event: ClipboardEvent) {
-		const pasted = event.clipboardData?.getData('text');
-		if (!pasted) return;
-		event.preventDefault();
-		inputText = pasted;
-		handleClean(true); // Auto-copy and minimize on paste
-		showDiff = false;
+		// Clear mobile-specific state
+		if (isMobile) {
+			touchFeedback = null;
+			longPressTimer.clear();
+			feedbackTimer.clear();
+		}
 	}
 
 	function expandInput() {
 		inputMinimized = false;
 	}
 
+	// Touch event handlers for mobile paste detection
+	function handleTouchStart() {
+		if (!isMobile) return;
+
+		touchStartTime = Date.now();
+
+		// Set up long press detection
+		longPressTimer.set(() => {
+			touchFeedback = { message: FEEDBACK_MESSAGES.LONG_PRESS, type: 'info', id: 'long-press' };
+
+			// Clear feedback after specified duration
+			feedbackTimer.set(() => {
+				if (touchFeedback?.id === 'long-press') {
+					touchFeedback = null;
+				}
+			}, TIMING.LONG_PRESS_FEEDBACK_DURATION);
+		}, TIMING.LONG_PRESS_DELAY);
+	}
+
+	function handleTouchEnd() {
+		if (!isMobile) return;
+
+		longPressTimer.clear();
+
+		const touchDuration = Date.now() - touchStartTime;
+
+		// If it was a short tap, clear any existing feedback
+		if (touchDuration < TIMING.LONG_PRESS_DELAY && touchFeedback?.id === 'long-press') {
+			touchFeedback = null;
+		}
+	}
+
+	function handleTouchCancel() {
+		if (!isMobile) return;
+		longPressTimer.clear();
+	}
+
+	// Enhanced paste handler for mobile
+	function handleMobilePaste(event: ClipboardEvent) {
+		const pasted = event.clipboardData?.getData('text');
+		if (!pasted) return;
+
+		event.preventDefault();
+		inputText = pasted;
+
+		// Show mobile-specific feedback for paste
+		if (isMobile) {
+			touchFeedback = { message: FEEDBACK_MESSAGES.PASTE_SUCCESS, type: 'processing' };
+		}
+
+		handleClean(true); // Auto-copy and minimize on paste
+		showDiff = false;
+	}
+
+	// Mobile clean button handler
+	function handleMobileClean() {
+		if (!inputText.trim()) {
+			touchFeedback = { message: FEEDBACK_MESSAGES.EMPTY_TEXT, type: 'error' };
+			// Use consistent timer utility instead of setTimeout
+			feedbackTimer.set(() => {
+				if (touchFeedback?.message === FEEDBACK_MESSAGES.EMPTY_TEXT) {
+					touchFeedback = null;
+				}
+			}, TIMING.ERROR_FEEDBACK_DURATION);
+			return;
+		}
+
+		// Show mobile-specific feedback for manual clean
+		touchFeedback = { message: FEEDBACK_MESSAGES.CLEANING, type: 'processing' };
+
+		// Use the existing handleClean function with auto-copy enabled
+		handleClean(true);
+		showDiff = false;
+	}
+
 	let changeCount = $derived(cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
+
+	// Feedback styling configuration
+	const FEEDBACK_STYLES = {
+		success: {
+			container: 'border-green-200 bg-green-50/90',
+			icon: 'bg-green-100',
+			text: 'text-green-800',
+			button: 'text-green-600 hover:bg-green-100'
+		},
+		error: {
+			container: 'border-red-200 bg-red-50/90',
+			icon: 'bg-red-100',
+			text: 'text-red-800',
+			button: 'text-red-600 hover:bg-red-100'
+		},
+		processing: {
+			container: 'border-blue-200 bg-blue-50/90',
+			icon: 'bg-blue-100',
+			text: 'text-blue-800',
+			button: 'text-blue-600 hover:bg-blue-100'
+		},
+		info: {
+			container: 'border-gray-200 bg-gray-50/90',
+			icon: 'bg-gray-100',
+			text: 'text-gray-800',
+			button: 'text-gray-600 hover:bg-gray-100'
+		}
+	} as const;
+
+	// Computed classes for feedback styling
+	const feedbackClasses = $derived(() => {
+		if (!touchFeedback) return '';
+		const baseClasses = 'overflow-hidden rounded-lg border shadow-lg backdrop-blur-sm';
+		const styles = FEEDBACK_STYLES[touchFeedback.type];
+		return `${baseClasses} ${styles.container}`;
+	});
+
+	const feedbackIconClasses = $derived(() => {
+		if (!touchFeedback) return '';
+		const styles = FEEDBACK_STYLES[touchFeedback.type];
+		return `flex h-8 w-8 items-center justify-center rounded-full ${styles.icon}`;
+	});
+
+	const feedbackTextClasses = $derived(() => {
+		if (!touchFeedback) return '';
+		const styles = FEEDBACK_STYLES[touchFeedback.type];
+		return `ml-3 text-sm font-medium ${styles.text}`;
+	});
+
+	const feedbackButtonClasses = $derived(() => {
+		if (!touchFeedback) return '';
+		const styles = FEEDBACK_STYLES[touchFeedback.type];
+		return `ml-auto flex h-6 w-6 items-center justify-center rounded-full ${styles.button}`;
+	});
 </script>
 
 <svelte:head>
@@ -69,7 +396,7 @@
 	/>
 </svelte:head>
 
-<svelte:window onpaste={handlePaste} />
+<svelte:window onpaste={handleMobilePaste} />
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 	<!-- Navigation/Header Bar -->
@@ -136,13 +463,87 @@
 
 		<!-- Main Interface - Prioritized -->
 		<div class="mt-12 space-y-6">
+			<!-- Mobile Touch Feedback -->
+			{#if isMobile && touchFeedback}
+				<div
+					class="fixed top-20 right-4 left-4 z-50 sm:right-auto sm:left-1/2 sm:w-96 sm:-translate-x-1/2"
+				>
+					<div class={feedbackClasses}>
+						<div class="flex items-center px-4 py-3">
+							<div class={feedbackIconClasses}>
+								{#if touchFeedback.type === 'success'}
+									<svg
+										class="h-4 w-4 text-green-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								{:else if touchFeedback.type === 'error'}
+									<svg
+										class="h-4 w-4 text-red-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								{:else if touchFeedback.type === 'processing'}
+									<svg
+										class="h-4 w-4 animate-spin text-blue-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+										/>
+									</svg>
+								{/if}
+							</div>
+							<p class={feedbackTextClasses}>
+								{touchFeedback.message}
+							</p>
+							{#if touchFeedback.type !== 'processing'}
+								<button
+									onclick={() => (touchFeedback = null)}
+									aria-label="Dismiss notification"
+									class={feedbackButtonClasses}
+								>
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Input Section -->
 			<div class="space-y-6">
 				{#if inputMinimized && cleaningResult}
 					<!-- Minimized Input State -->
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
 						<div class="px-6 py-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center space-x-3">
@@ -310,9 +711,7 @@
 					{/if}
 				{:else}
 					<!-- Full Input State -->
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
 						<div class="border-b border-gray-100 px-6 py-4">
 							<div class="flex items-center space-x-3">
 								<div
@@ -341,6 +740,9 @@
 								<textarea
 									id="input-text"
 									bind:value={inputText}
+									ontouchstart={handleTouchStart}
+									ontouchend={handleTouchEnd}
+									ontouchcancel={handleTouchCancel}
 									placeholder="Paste your AI generated text here...
 
 ✨ Auto-processing: Text is automatically cleaned when you paste
@@ -367,6 +769,51 @@ Just paste your text and you're done!"
 									</div>
 								{/if}
 							</div>
+
+							<!-- Mobile Clean Button -->
+							{#if isMobile}
+								<div class="mt-4 flex flex-col space-y-3">
+									<button
+										onclick={() => handleMobileClean()}
+										disabled={!inputText.trim() || touchFeedback?.type === 'processing'}
+										class="flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-base font-medium text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500"
+										style="min-height: 44px;"
+									>
+										{#if touchFeedback?.type === 'processing'}
+											<svg
+												class="h-5 w-5 animate-spin"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+												/>
+											</svg>
+											<span>Processing...</span>
+										{:else}
+											<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												/>
+											</svg>
+											<span>Clean Text</span>
+										{/if}
+									</button>
+
+									{#if !inputText.trim()}
+										<p class="text-center text-sm text-gray-500">
+											Enter or paste text above to clean it
+										</p>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -428,9 +875,9 @@ Just paste your text and you're done!"
 						</div>
 					{/if}
 
-					<div
-						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-sm"
-					>
+					<div class={CARD_CLASSES}>
+						class="overflow-hidden rounded-xl border border-white/20 bg-white/80 shadow-xl
+						backdrop-blur-sm" >
 						<div class="border-b border-gray-100 px-6 py-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center space-x-3">
