@@ -1,0 +1,10 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": ".svelte-kit/output/client"
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
