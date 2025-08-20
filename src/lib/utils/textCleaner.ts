@@ -36,7 +36,6 @@ const SUSPICIOUS_WHITESPACE = [
 ];
 
 // Character patterns that indicate AI generation
-const EM_DASH_REGEX = /\u2014/g; // Em dash
 const EN_DASH_REGEX = /\u2013/g; // En dash (often used where hyphen should be)
 const SMART_QUOTES_REGEX = /[\u201C\u201D\u2018\u2019]/g; // Smart/curly quotes
 const UNICODE_ELLIPSIS_REGEX = /\u2026/g; // Unicode ellipsis character
@@ -128,15 +127,23 @@ export function cleanText(text: string): CleaningResult {
 	const changes: TextChange[] = [];
 	let cleaned = text;
 
-	// Find em dashes
-	const emDashMatches = [...text.matchAll(EM_DASH_REGEX)];
-	for (const match of emDashMatches) {
+	// Find em dashes with context to handle spacing properly
+	const emDashContextRegex = /(\s?)\u2014(\s?)/g;
+	const emDashContextMatches = [...text.matchAll(emDashContextRegex)];
+	for (const match of emDashContextMatches) {
 		if (match.index !== undefined) {
+			const beforeSpace = match[1]; // space before em dash (if any)
+			const afterSpace = match[2];  // space after em dash (if any)
+			const fullMatch = match[0];
+
+			// Always ensure exactly one space on each side
+			const replacement = ' - ';
+
 			changes.push({
 				start: match.index,
-				end: match.index + 1,
-				original: '\u2014',
-				replacement: ' - ',
+				end: match.index + fullMatch.length,
+				original: fullMatch,
+				replacement: replacement,
 				type: 'em-dash'
 			});
 		}
