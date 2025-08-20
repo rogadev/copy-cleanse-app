@@ -9,7 +9,16 @@ export interface TextChange {
 	end: number;
 	original: string;
 	replacement: string;
-	type: 'whitespace' | 'em-dash' | 'en-dash' | 'smart-quotes' | 'ellipsis' | 'soft-hyphen' | 'fullwidth' | 'url-params' | 'other';
+	type:
+		| 'whitespace'
+		| 'em-dash'
+		| 'en-dash'
+		| 'smart-quotes'
+		| 'ellipsis'
+		| 'soft-hyphen'
+		| 'fullwidth'
+		| 'url-params'
+		| 'other';
 }
 
 // Common AI-generated text markers and suspicious whitespace characters
@@ -81,7 +90,7 @@ const URL_REGEX = /https?:\/\/[^\s]+/gi;
 /**
  * Cleans AI tracking parameters from a single URL
  */
-function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; } {
+function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[] } {
 	try {
 		const urlObj = new URL(url);
 		const removedParams: string[] = [];
@@ -93,13 +102,13 @@ function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; }
 			const paramKey = key.toLowerCase();
 
 			// Check if this parameter matches any AI tracking pattern
-			const isAiParam = AI_TRACKING_PARAMS.some(pattern =>
-				pattern.toLowerCase() === paramString.toLowerCase()
-			) || (
-					// Also check for just the parameter keys (more flexible)
-					(paramKey === 'source' || paramKey === 'utm_source' || paramKey === 'ref') &&
-					(value.toLowerCase().match(/^(chatgpt|openai|claude|anthropic|gemini|bard|copilot|bing)$/))
-				);
+			const isAiParam =
+				AI_TRACKING_PARAMS.some((pattern) => pattern.toLowerCase() === paramString.toLowerCase()) ||
+				// Also check for just the parameter keys (more flexible)
+				((paramKey === 'source' || paramKey === 'utm_source' || paramKey === 'ref') &&
+					value
+						.toLowerCase()
+						.match(/^(chatgpt|openai|claude|anthropic|gemini|bard|copilot|bing)$/));
 
 			if (isAiParam) {
 				removedParams.push(paramString);
@@ -108,13 +117,13 @@ function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; }
 		}
 
 		// Second pass: remove the identified parameters
-		paramsToDelete.forEach(key => urlObj.searchParams.delete(key));
+		paramsToDelete.forEach((key) => urlObj.searchParams.delete(key));
 
 		return {
 			cleanedUrl: urlObj.toString(),
 			removedParams
 		};
-	} catch (error) {
+	} catch {
 		// If URL parsing fails, return original URL
 		return {
 			cleanedUrl: url,
@@ -132,8 +141,6 @@ export function cleanText(text: string): CleaningResult {
 	const emDashContextMatches = [...text.matchAll(emDashContextRegex)];
 	for (const match of emDashContextMatches) {
 		if (match.index !== undefined) {
-			const beforeSpace = match[1]; // space before em dash (if any)
-			const afterSpace = match[2];  // space after em dash (if any)
 			const fullMatch = match[0];
 
 			// Always ensure exactly one space on each side
@@ -238,12 +245,15 @@ export function cleanText(text: string): CleaningResult {
 
 			// Convert fullwidth to regular characters
 			const code = char.charCodeAt(0);
-			if (code >= 0xFF21 && code <= 0xFF3A) { // A-Z
-				replacement = String.fromCharCode(code - 0xFF21 + 0x41);
-			} else if (code >= 0xFF41 && code <= 0xFF5A) { // a-z
-				replacement = String.fromCharCode(code - 0xFF41 + 0x61);
-			} else if (code >= 0xFF10 && code <= 0xFF19) { // 0-9
-				replacement = String.fromCharCode(code - 0xFF10 + 0x30);
+			if (code >= 0xff21 && code <= 0xff3a) {
+				// A-Z
+				replacement = String.fromCharCode(code - 0xff21 + 0x41);
+			} else if (code >= 0xff41 && code <= 0xff5a) {
+				// a-z
+				replacement = String.fromCharCode(code - 0xff41 + 0x61);
+			} else if (code >= 0xff10 && code <= 0xff19) {
+				// 0-9
+				replacement = String.fromCharCode(code - 0xff10 + 0x30);
 			}
 
 			if (replacement !== char) {
@@ -363,12 +373,12 @@ export function getCharacterName(char: string): string {
 
 	// Check for fullwidth characters
 	const code = char.charCodeAt(0);
-	if (code >= 0xFF21 && code <= 0xFF3A) {
-		return `Fullwidth uppercase letter (${String.fromCharCode(code - 0xFF21 + 0x41)})`;
-	} else if (code >= 0xFF41 && code <= 0xFF5A) {
-		return `Fullwidth lowercase letter (${String.fromCharCode(code - 0xFF41 + 0x61)})`;
-	} else if (code >= 0xFF10 && code <= 0xFF19) {
-		return `Fullwidth digit (${String.fromCharCode(code - 0xFF10 + 0x30)})`;
+	if (code >= 0xff21 && code <= 0xff3a) {
+		return `Fullwidth uppercase letter (${String.fromCharCode(code - 0xff21 + 0x41)})`;
+	} else if (code >= 0xff41 && code <= 0xff5a) {
+		return `Fullwidth lowercase letter (${String.fromCharCode(code - 0xff41 + 0x61)})`;
+	} else if (code >= 0xff10 && code <= 0xff19) {
+		return `Fullwidth digit (${String.fromCharCode(code - 0xff10 + 0x30)})`;
 	}
 
 	return (
