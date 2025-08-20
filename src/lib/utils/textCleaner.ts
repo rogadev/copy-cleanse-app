@@ -10,15 +10,15 @@ export interface TextChange {
 	original: string;
 	replacement: string;
 	type:
-	| 'whitespace'
-	| 'em-dash'
-	| 'en-dash'
-	| 'smart-quotes'
-	| 'ellipsis'
-	| 'soft-hyphen'
-	| 'fullwidth'
-	| 'url-params'
-	| 'other';
+		| 'whitespace'
+		| 'em-dash'
+		| 'en-dash'
+		| 'smart-quotes'
+		| 'ellipsis'
+		| 'soft-hyphen'
+		| 'fullwidth'
+		| 'url-params'
+		| 'other';
 }
 
 // Common AI-generated text markers and suspicious whitespace characters
@@ -90,7 +90,7 @@ const URL_REGEX = /https?:\/\/[^\s]+/gi;
 /**
  * Cleans AI tracking parameters from a single URL
  */
-function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[]; } {
+function cleanUrl(url: string): { cleanedUrl: string; removedParams: string[] } {
 	try {
 		const urlObj = new URL(url);
 		const removedParams: string[] = [];
