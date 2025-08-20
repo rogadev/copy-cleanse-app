@@ -93,5 +93,5 @@ vite.config.ts.timestamp-*
 tmp/
 temp/
 
-# Lighthouse
-.lighthouseci/
+# Assistants
+.kiro/
