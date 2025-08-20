@@ -2,7 +2,7 @@ import adapterAuto from '@sveltejs/adapter-auto';
 import adapterStatic from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-// Use static adapter for Lighthouse CI and production builds, auto adapter otherwise
+// Use static adapter only for Lighthouse CI, auto adapter for everything else
 const adapter = process.env.LIGHTHOUSE_BUILD
 	? adapterStatic({
 			pages: 'build', // Lighthouse CI expects 'build'
@@ -11,9 +11,7 @@ const adapter = process.env.LIGHTHOUSE_BUILD
 			precompress: false,
 			strict: true
 		})
-	: process.env.VERCEL
-		? adapterStatic() // Let Vercel zero-config handle the directories
-		: adapterAuto();
+	: adapterAuto(); // Works for Vercel, Netlify, and local dev
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
