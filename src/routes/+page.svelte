@@ -2,6 +2,8 @@
 	import { cleanText, type CleaningResult } from '$lib/utils/textCleaner.js';
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
 	import { onMount } from 'svelte';
+	import type { TouchFeedback } from '$lib/types/feedback.js';
+	import { FEEDBACK_MESSAGES, FEEDBACK_STYLES } from '$lib/types/feedback.js';
 
 	let inputText = $state('');
 	let cleaningResult = $state<CleaningResult | null>(null);
@@ -13,8 +15,7 @@
 
 	// Mobile-specific state variables
 	let isMobile = $state(false);
-	type FeedbackType = 'success' | 'error' | 'processing' | 'info';
-	let touchFeedback = $state<{ message: string; type: FeedbackType; id?: string } | null>(null);
+	let touchFeedback = $state<TouchFeedback | null>(null);
 	let touchStartTime = $state(0);
 
 	// === CONSTANTS ===
@@ -25,16 +26,9 @@
 		LONG_PRESS_FEEDBACK_DURATION: 2000
 	} as const;
 
-	const FEEDBACK_MESSAGES = {
-		SUCCESS: 'Copied to clipboard!',
-		ERROR: 'Copy failed. Try manual copy button.',
-		PROCESSING: 'Processing text...',
-		PASTE_SUCCESS: 'Text pasted - cleaning automatically...',
-		LONG_PRESS: 'Long press detected - paste available',
-		EMPTY_TEXT: 'Please enter some text to clean',
-		CLEANING: 'Cleaning text...',
-		CLIPBOARD_LARGE: 'Text too large for clipboard. Use manual copy.',
-		CLIPBOARD_PERMISSION: 'Clipboard access denied. Use manual copy button.'
+	const LIMITS = {
+		MAX_CLIPBOARD_SIZE: 1000000, // 1MB limit for safety
+		MOBILE_BREAKPOINT: 768
 	} as const;
 
 	const CARD_CLASSES =
@@ -79,7 +73,7 @@
 		const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 		// Check screen size (mobile-first breakpoint)
-		const isSmallScreen = window.innerWidth <= 768;
+		const isSmallScreen = window.innerWidth <= LIMITS.MOBILE_BREAKPOINT;
 
 		// Mobile if user agent indicates mobile OR (touch device AND small screen)
 		return isMobileUserAgent || (isTouchDevice && isSmallScreen);
@@ -151,9 +145,8 @@
 		try {
 			// Check if text is too large (some browsers have limits)
 			const textLength = cleaningResult.cleaned.length;
-			const maxClipboardSize = 1000000; // 1MB limit for safety
 
-			if (textLength > maxClipboardSize) {
+			if (textLength > LIMITS.MAX_CLIPBOARD_SIZE) {
 				throw new Error('Text too large for clipboard');
 			}
 
@@ -309,6 +302,25 @@
 		showDiff = false;
 	}
 
+	// Mobile copy button handler
+	async function handleMobileCopy() {
+		if (!cleaningResult) {
+			touchFeedback = { message: 'No text to copy', type: 'error' };
+			setTimeout(() => {
+				if (touchFeedback?.message === 'No text to copy') {
+					touchFeedback = null;
+				}
+			}, TIMING.ERROR_FEEDBACK_DURATION);
+			return;
+		}
+
+		// Show processing feedback
+		touchFeedback = { message: 'Copying to clipboard...', type: 'processing' };
+
+		// Use the enhanced copyCleanText function
+		await copyCleanText();
+	}
+
 	// Mobile clean button handler
 	function handleMobileClean() {
 		if (!inputText.trim()) {
@@ -332,34 +344,6 @@
 
 	let changeCount = $derived(cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
-
-	// Feedback styling configuration
-	const FEEDBACK_STYLES = {
-		success: {
-			container: 'border-green-200 bg-green-50/90',
-			icon: 'bg-green-100',
-			text: 'text-green-800',
-			button: 'text-green-600 hover:bg-green-100'
-		},
-		error: {
-			container: 'border-red-200 bg-red-50/90',
-			icon: 'bg-red-100',
-			text: 'text-red-800',
-			button: 'text-red-600 hover:bg-red-100'
-		},
-		processing: {
-			container: 'border-blue-200 bg-blue-50/90',
-			icon: 'bg-blue-100',
-			text: 'text-blue-800',
-			button: 'text-blue-600 hover:bg-blue-100'
-		},
-		info: {
-			container: 'border-gray-200 bg-gray-50/90',
-			icon: 'bg-gray-100',
-			text: 'text-gray-800',
-			button: 'text-gray-600 hover:bg-gray-100'
-		}
-	} as const;
 
 	// Computed classes for feedback styling
 	const feedbackClasses = $derived(() => {
@@ -386,6 +370,18 @@
 		const styles = FEEDBACK_STYLES[touchFeedback.type];
 		return `ml-auto flex h-6 w-6 items-center justify-center rounded-full ${styles.button}`;
 	});
+
+	// Button styling configuration
+	const BUTTON_STYLES = {
+		mobilePrimary:
+			'flex w-full items-center justify-center space-x-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 text-base font-medium text-white shadow-lg transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500 min-h-[44px]',
+		mobileSecondary:
+			'flex flex-1 items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none active:scale-95 min-h-[44px]',
+		desktopPrimary:
+			'group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none',
+		desktopSecondary:
+			'group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none'
+	} as const;
 </script>
 
 <svelte:head>
@@ -853,14 +849,14 @@ Just paste your text and you're done!"
 										</p>
 									</div>
 								</div>
-								<div class="hidden items-center space-x-2 sm:flex">
-									<div class="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1">
-										<svg
-											class="h-4 w-4 text-green-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
+								{#if isMobile}
+									<!-- Mobile copy again button in success banner -->
+									<button
+										onclick={handleMobileCopy}
+										class="flex items-center space-x-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-green-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none active:scale-95"
+										style="min-height: 36px;"
+									>
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
 												stroke-linejoin="round"
@@ -868,9 +864,29 @@ Just paste your text and you're done!"
 												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
 											/>
 										</svg>
-										<span class="text-sm font-medium text-green-700">Copied</span>
+										<span>Copy Again</span>
+									</button>
+								{:else}
+									<!-- Desktop success indicator -->
+									<div class="hidden items-center space-x-2 sm:flex">
+										<div class="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1">
+											<svg
+												class="h-4 w-4 text-green-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+												/>
+											</svg>
+											<span class="text-sm font-medium text-green-700">Copied</span>
+										</div>
 									</div>
-								</div>
+								{/if}
 							</div>
 						</div>
 					{/if}
@@ -951,7 +967,7 @@ Just paste your text and you're done!"
 											{/if}
 										</p>
 									</div>
-									<div class="p-4" style="max-height: 40vh; overflow-y: auto;">
+									<div class="max-h-[40vh] overflow-y-auto p-4">
 										{#if hasChanges}
 											<HighlightedText
 												text={cleaningResult.original}
@@ -991,56 +1007,129 @@ Just paste your text and you're done!"
 								</div>
 							{/if}
 
-							<!-- Buttons Container - Side by side on desktop, stacked on mobile -->
-							<div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-								<!-- Show/Hide Results Button -->
-								<button
-									onclick={() => (showDiff = !showDiff)}
-									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:outline-none"
-								>
-									<svg
-										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+							<!-- Buttons Container - Mobile-first layout -->
+							{#if isMobile}
+								<!-- Mobile-optimized button layout -->
+								<div class="space-y-4">
+									<!-- Primary Mobile Copy Button -->
+									<button
+										onclick={handleMobileCopy}
+										disabled={!cleaningResult || touchFeedback?.type === 'processing'}
+										class={BUTTON_STYLES.mobilePrimary}
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-										/>
-									</svg>
-									<span>{showDiff ? 'Hide' : 'Show'} Results</span>
-								</button>
+										{#if touchFeedback?.type === 'processing'}
+											<svg
+												class="h-5 w-5 animate-spin"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+												/>
+											</svg>
+											<span>Copying...</span>
+										{:else}
+											<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+												/>
+											</svg>
+											<span>Copy to Clipboard</span>
+										{/if}
+									</button>
 
-								<!-- Copy Again Button -->
-								<button
-									onclick={copyCleanText}
-									class="group flex w-full items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-700 hover:to-emerald-700 focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:outline-none"
-								>
-									<svg
-										class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+									<!-- Secondary Mobile Actions -->
+									<div class="flex space-x-3">
+										<button
+											onclick={() => (showDiff = !showDiff)}
+											class={BUTTON_STYLES.mobileSecondary}
+										>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+												/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+												/>
+											</svg>
+											<span>{showDiff ? 'Hide' : 'Show'}</span>
+										</button>
+
+										<button onclick={reset} class={BUTTON_STYLES.mobileSecondary}>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+												/>
+											</svg>
+											<span>New</span>
+										</button>
+									</div>
+								</div>
+							{:else}
+								<!-- Desktop button layout -->
+								<div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+									<!-- Show/Hide Results Button -->
+									<button
+										onclick={() => (showDiff = !showDiff)}
+										class={BUTTON_STYLES.desktopPrimary}
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-										/>
-									</svg>
-									<span>Copy Again</span>
-								</button>
-							</div>
+										<svg
+											class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+											/>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+											/>
+										</svg>
+										<span>{showDiff ? 'Hide' : 'Show'} Results</span>
+									</button>
+
+									<!-- Copy Again Button -->
+									<button onclick={copyCleanText} class={BUTTON_STYLES.desktopSecondary}>
+										<svg
+											class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 2z"
+											/>
+										</svg>
+										<span>Copy Again</span>
+									</button>
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
