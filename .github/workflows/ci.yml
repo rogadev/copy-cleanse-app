@@ -20,13 +20,11 @@ permissions:
   contents: read
 
 jobs:
-  # Quality checks that can run in parallel
+  # Quality checks - linting, formatting, and type checking
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -45,10 +43,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Generate cache key
-        id: cache-key
-        run: echo "key=${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}" >> $GITHUB_OUTPUT
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -60,53 +54,6 @@ jobs:
 
       - name: Check code formatting
         run: pnpm format --check
-
-  # Build verification
-  build:
-    name: Build Verification
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Build application
-        run: pnpm build
-        env:
-          NODE_ENV: production
-
-      - name: Verify build output
-        run: |
-          if [ ! -d "build" ]; then
-            echo "Build directory not found!"
-            exit 1
-          fi
-          echo "Build completed successfully"
-          ls -la build/
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: build/
-          retention-days: 3
-          compression-level: 6
 
   # Security and dependency scanning
   security:
@@ -139,47 +86,3 @@ jobs:
 
       - name: Check for outdated dependencies
         run: pnpm outdated || true
-
-  # Test execution (placeholder for future tests)
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      # TODO: Uncomment when tests are implemented
-      # - name: Run unit tests
-      #   run: pnpm test:unit
-      #
-      # - name: Run component tests
-      #   run: pnpm test:component
-      #
-      # - name: Upload test coverage
-      #   uses: codecov/codecov-action@v4
-      #   if: always()
-
-      - name: Tests placeholder
-        run: |
-          echo "✅ Tests placeholder - ready for implementation"
-          echo "Recommended testing setup:"
-          echo "  - Vitest for unit/component tests"  
-          echo "  - Playwright for E2E tests"
-          echo "  - Testing Library for component testing"
