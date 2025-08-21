@@ -51,52 +51,54 @@
 
 	function getChangeClasses(changeType: string): string {
 		switch (changeType) {
-			case 'whitespace':
-			case 'soft-hyphen':
-				return 'border border-red-300 bg-red-100';
 			case 'smart-quotes':
-			case 'ellipsis':
-				return 'border border-yellow-300 bg-yellow-100';
+				return 'ai-smart-quote bg-yellow-500/20 text-yellow-300 px-0.5 rounded border border-yellow-500/30';
 			case 'em-dash':
 			case 'en-dash':
-			case 'fullwidth':
-				return 'border border-blue-300 bg-blue-100';
+				return 'ai-em-dash bg-red-500/20 text-red-300 px-0.5 rounded border border-red-500/30';
+			case 'soft-hyphen':
+			case 'whitespace':
+				return 'ai-soft-hyphen bg-purple-500/20 text-purple-300 px-0.5 rounded border border-purple-500/30';
+			case 'ellipsis':
+				return 'ai-ellipsis bg-blue-500/20 text-blue-300 px-0.5 rounded border border-blue-500/30';
 			case 'url-params':
-				return 'border border-purple-300 bg-purple-100';
+				return 'ai-tracking-param bg-orange-500/20 text-orange-300 px-1 rounded border border-orange-500/30';
+			case 'fullwidth':
+				return 'ai-fullwidth bg-cyan-500/20 text-cyan-300 px-0.5 rounded border border-cyan-500/30';
 			default:
-				return 'border border-gray-300 bg-gray-100';
+				return 'ai-other bg-purple-500/20 text-purple-300 px-0.5 rounded border border-purple-500/30';
 		}
 	}
 
 	function getTextClasses(changeType: string): string {
 		switch (changeType) {
-			case 'whitespace':
-			case 'soft-hyphen':
-				return 'text-red-600';
 			case 'smart-quotes':
-			case 'ellipsis':
-				return 'text-yellow-700';
+				return 'text-yellow-300';
 			case 'em-dash':
 			case 'en-dash':
-			case 'fullwidth':
-				return 'text-blue-700';
+				return 'text-red-300';
+			case 'soft-hyphen':
+			case 'whitespace':
+				return 'text-purple-300';
+			case 'ellipsis':
+				return 'text-blue-300';
 			case 'url-params':
-				return 'text-purple-700';
+				return 'text-orange-300';
+			case 'fullwidth':
+				return 'text-cyan-300';
 			default:
-				return 'text-gray-700';
+				return 'text-purple-300';
 		}
 	}
 
 	let segments = $derived(createSegments(text, changes));
 </script>
 
-<div class="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+<div class="font-mono text-sm leading-relaxed whitespace-pre-wrap text-slate-100">
 	{#each segments as segment, i (i)}
 		{#if segment.isChange && segment.change}
 			<span
-				class="group relative inline-block {getChangeClasses(
-					segment.change.type
-				)} mx-0.5 cursor-help rounded px-1"
+				class="group relative inline-block {getChangeClasses(segment.change.type)} cursor-help"
 				title="Replaced: {getCharacterName(segment.change.original)} → {segment.change
 					.replacement || '(removed)'}"
 			>
@@ -112,11 +114,11 @@
 							: '·'}
 					</span>
 				{:else}
-					<span class="{getTextClasses(segment.change.type)} line-through">{segment.text}</span>
+					<span class={getTextClasses(segment.change.type)}>{segment.text}</span>
 				{/if}
 				<!-- Tooltip showing what was replaced -->
 				<span
-					class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 transform rounded bg-gray-800 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+					class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 transform rounded bg-slate-800 px-2 py-1 text-xs whitespace-nowrap text-slate-100 opacity-0 ring-1 ring-white/10 transition-opacity duration-200 group-hover:opacity-100"
 				>
 					{getCharacterName(segment.change.original)} → "{segment.change.replacement ||
 						'(removed)'}"
@@ -129,6 +131,35 @@
 </div>
 
 <style>
+	/* AI Artifact Highlighting Styles - matching CopyCleanse guide */
+	:global(.ai-smart-quote) {
+		box-shadow: 0 0 4px rgba(234, 179, 8, 0.2);
+	}
+
+	:global(.ai-em-dash) {
+		box-shadow: 0 0 4px rgba(239, 68, 68, 0.2);
+	}
+
+	:global(.ai-soft-hyphen) {
+		box-shadow: 0 0 4px rgba(168, 85, 247, 0.2);
+	}
+
+	:global(.ai-ellipsis) {
+		box-shadow: 0 0 4px rgba(59, 130, 246, 0.2);
+	}
+
+	:global(.ai-tracking-param) {
+		box-shadow: 0 0 4px rgba(249, 115, 22, 0.2);
+	}
+
+	:global(.ai-fullwidth) {
+		box-shadow: 0 0 4px rgba(6, 182, 212, 0.2);
+	}
+
+	:global(.ai-other) {
+		box-shadow: 0 0 4px rgba(168, 85, 247, 0.2);
+	}
+
 	/* Add hover effect for tooltips */
 	:global(.group:hover .tooltip) {
 		opacity: 1;

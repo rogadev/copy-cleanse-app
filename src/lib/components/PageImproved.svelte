@@ -2,14 +2,18 @@
 	import HighlightedText from '$lib/components/HighlightedText.svelte';
 	import { onMount } from 'svelte';
 	import { CARD_CLASSES, BUTTON_STYLES } from '$lib/constants/ui.js';
+	import { fade } from 'svelte/transition';
 	import { createTextCleaner } from '$lib/utils/useTextCleaner.js';
 
 	// Initialize the text cleaner hook
-	const { state, actions } = createTextCleaner();
+	const { state: cleanerState, actions } = createTextCleaner();
 
 	// Computed values - access state directly for reactivity
-	let changeCount = $derived(state.cleaningResult?.changes.length ?? 0);
+	let changeCount = $derived(cleanerState.cleaningResult?.changes.length ?? 0);
 	let hasChanges = $derived(changeCount > 0);
+
+	// Focus state for textarea to control overlay hint
+	let inputFocused = $state(false);
 
 	// Cleanup on component destroy
 	onMount(() => {
@@ -43,7 +47,7 @@
 	}
 
 	function toggleDiff() {
-		actions.setShowDiff(!state.showDiff);
+		actions.setShowDiff(!cleanerState.showDiff);
 	}
 </script>
 
@@ -124,7 +128,7 @@
 		<div class="mt-12 space-y-6">
 			<!-- Input Section -->
 			<div class="space-y-6">
-				{#if state.inputMinimized && state.cleaningResult}
+				{#if cleanerState.inputMinimized && cleanerState.cleaningResult}
 					<!-- Minimized Input State -->
 					<div class={CARD_CLASSES}>
 						<div class="px-6 py-4">
@@ -184,7 +188,7 @@
 					</div>
 
 					<!-- Visual Comparison View -->
-					{#if state.showDiff}
+					{#if cleanerState.showDiff}
 						<div
 							class="overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-xl backdrop-blur-sm"
 						>
@@ -250,12 +254,12 @@
 								<div class="rounded-lg border border-amber-200 bg-white p-4">
 									{#if hasChanges}
 										<HighlightedText
-											text={state.cleaningResult.original}
-											changes={state.cleaningResult.changes}
+											text={cleanerState.cleaningResult.original}
+											changes={cleanerState.cleaningResult.changes}
 										/>
 									{:else}
 										<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
-											{state.cleaningResult.original}
+											{cleanerState.cleaningResult.original}
 										</div>
 									{/if}
 								</div>
@@ -284,7 +288,7 @@
 										/>
 									</svg>
 								</div>
-								<h2 class="text-lg font-semibold text-gray-900">Input Text</h2>
+								<!-- Removed redundant header -->
 							</div>
 						</div>
 
@@ -292,43 +296,46 @@
 							<div class="relative">
 								<textarea
 									id="input-text"
-									value={state.inputText}
+									value={cleanerState.inputText}
 									oninput={handleInputChange}
+									onfocus={() => (inputFocused = true)}
+									onblur={() => (inputFocused = false)}
 									ontouchstart={actions.handleTouchStart}
 									ontouchend={actions.handleTouchEnd}
 									ontouchcancel={actions.handleTouchCancel}
-									placeholder="Paste your AI generated text here...
-
-✨ Auto-processing: Text is automatically cleaned when you paste
-📋 Auto-copy: Clean results are instantly copied to your clipboard
-🔍 Detects and removes:
-• Hidden whitespace & zero-width characters (invisible markers)
-• Smart quotes → regular quotes
-• Em dashes (—) & en dashes (–) → regular dashes (-)
-• Unicode ellipsis (…) → regular dots (...)
-• Soft hyphens (invisible line-break hints)
-• Fullwidth characters → regular characters
-• AI tracking URL parameters (?source=chatgpt, ?utm_source=openai, etc.)
-• All suspicious formatting used for AI detection
-
-Just paste your text and you're done!"
+									placeholder=""
 									class="block h-[21.5rem] w-full resize-none rounded-lg border-0 bg-white/60 px-4 py-3 font-mono text-sm text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset lg:h-[15.5rem]"
 								></textarea>
-								{#if state.inputText.length > 0}
+								{#if !inputFocused && cleanerState.inputText.length === 0}
+									<div
+										class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+										transition:fade={{ duration: 250 }}
+									>
+										<span
+											class="relative inline-block text-sm font-semibold text-indigo-100 select-none"
+										>
+											<span
+												class="absolute inset-0 -z-10 animate-[gentle-glow_5s_ease-in-out_infinite] rounded-full bg-indigo-500 opacity-40 blur-2xl"
+											></span>
+											Paste your AI generated text...
+										</span>
+									</div>
+								{/if}
+								{#if cleanerState.inputText.length > 0}
 									<div class="absolute top-3 right-3">
 										<div class="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-											{state.inputText.length} chars
+											{cleanerState.inputText.length} chars
 										</div>
 									</div>
 								{/if}
 							</div>
 
 							<!-- Mobile Clean Button -->
-							{#if state.isMobile}
+							{#if cleanerState.isMobile}
 								<div class="mt-4 flex flex-col space-y-3">
 									<button
 										onclick={handleMobileClean}
-										disabled={!state.inputText.trim()}
+										disabled={!cleanerState.inputText.trim()}
 										class={BUTTON_STYLES.mobilePrimary}
 									>
 										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +349,7 @@ Just paste your text and you're done!"
 										<span>Clean Text</span>
 									</button>
 
-									{#if !state.inputText.trim()}
+									{#if !cleanerState.inputText.trim()}
 										<p class="text-center text-sm text-gray-500">
 											Enter or paste text above to clean it
 										</p>
@@ -355,10 +362,10 @@ Just paste your text and you're done!"
 			</div>
 
 			<!-- Results Section -->
-			{#if state.cleaningResult}
+			{#if cleanerState.cleaningResult}
 				<div class="space-y-6">
 					<!-- Success Banner -->
-					{#if state.copySuccess}
+					{#if cleanerState.copySuccess}
 						<div
 							class="overflow-hidden rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg"
 						>
@@ -384,11 +391,11 @@ Just paste your text and you're done!"
 											✨ Clean text copied to clipboard!
 										</h3>
 										<p class="text-sm text-green-700">
-											Ready to paste anywhere • {state.cleaningResult.cleaned.length} characters
+											Ready to paste anywhere • {cleanerState.cleaningResult.cleaned.length} characters
 										</p>
 									</div>
 								</div>
-								{#if state.isMobile}
+								{#if cleanerState.isMobile}
 									<button onclick={handleMobileCopy} class={BUTTON_STYLES.mobileSecondary}>
 										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
@@ -430,7 +437,7 @@ Just paste your text and you're done!"
 									<div>
 										<h3 class="text-lg font-semibold text-gray-900">Clean Text</h3>
 										<p class="text-sm text-gray-600">
-											{state.cleaningResult.cleaned.length} characters • {changeCount}
+											{cleanerState.cleaningResult.cleaned.length} characters • {changeCount}
 											{changeCount === 1 ? 'change' : 'changes'} made
 										</p>
 									</div>
@@ -455,7 +462,7 @@ Just paste your text and you're done!"
 													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
 												/>
 											</svg>
-											{state.showDiff ? 'Hide' : 'Show'} Changes
+											{cleanerState.showDiff ? 'Hide' : 'Show'} Changes
 										</button>
 									{/if}
 									<button onclick={handleMobileCopy} class={BUTTON_STYLES.desktopSecondary}>
@@ -476,7 +483,7 @@ Just paste your text and you're done!"
 						<div class="p-6">
 							<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 								<div class="font-mono text-sm whitespace-pre-wrap text-gray-900">
-									{state.cleaningResult.cleaned}
+									{cleanerState.cleaningResult.cleaned}
 								</div>
 							</div>
 						</div>
@@ -486,3 +493,17 @@ Just paste your text and you're done!"
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes gentle-glow {
+		0%,
+		100% {
+			opacity: 0.25;
+			transform: scale(1);
+		}
+		50% {
+			opacity: 0.6;
+			transform: scale(1.15);
+		}
+	}
+</style>
