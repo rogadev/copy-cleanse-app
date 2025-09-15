@@ -61,6 +61,6 @@
 		}
 	},
 	"dependencies": {
-		"@iconify/svelte": "^5.0.1"
+		"@iconify/svelte": "^5.0.2"
 	}
 }
