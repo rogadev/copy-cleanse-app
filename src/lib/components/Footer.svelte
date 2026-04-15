@@ -65,6 +65,17 @@
 				</a>
 			</div>
 
+			<!-- Site navigation -->
+			<nav
+				class="mb-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-400"
+				aria-label="Footer"
+			>
+				<a href="/about" class="transition-colors hover:text-indigo-300">About</a>
+				<a href="/privacy" class="transition-colors hover:text-indigo-300">Privacy</a>
+				<a href="/terms" class="transition-colors hover:text-indigo-300">Terms</a>
+				<a href="/contact" class="transition-colors hover:text-indigo-300">Contact</a>
+			</nav>
+
 			<div class="text-sm text-slate-400">
 				<p class="mb-2">Built to help identify and remove AI-generated text markers</p>
 				<p>Made with ❤️ for content creators • &copy; 2025 Ryan Roga</p>

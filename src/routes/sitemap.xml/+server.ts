@@ -10,9 +10,31 @@ const staticRoutes = [
 		changeFreq: 'monthly',
 		priority: '1.0',
 		lastMod: new Date().toISOString()
+	},
+	{
+		url: '/about',
+		changeFreq: 'yearly',
+		priority: '0.6',
+		lastMod: new Date().toISOString()
+	},
+	{
+		url: '/privacy',
+		changeFreq: 'yearly',
+		priority: '0.4',
+		lastMod: new Date().toISOString()
+	},
+	{
+		url: '/terms',
+		changeFreq: 'yearly',
+		priority: '0.4',
+		lastMod: new Date().toISOString()
+	},
+	{
+		url: '/contact',
+		changeFreq: 'yearly',
+		priority: '0.5',
+		lastMod: new Date().toISOString()
 	}
-	// Add more routes here as your site grows, e.g.:
-	// { url: '/about', changeFreq: 'yearly', priority: '0.8', lastMod: new Date().toISOString() },
 ];
 
 export const GET: RequestHandler = async () => {
