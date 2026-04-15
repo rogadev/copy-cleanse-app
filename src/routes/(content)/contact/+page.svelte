@@ -30,9 +30,3 @@
 	General inquiries, partnership questions, press: email
 	<a href="mailto:ryan@roga.dev">ryan@roga.dev</a>.
 </p>
-
-<h2>Response times</h2>
-<p>
-	Copy Cleanse is a solo project maintained in spare time. Expect responses within a few business
-	days for most inquiries; security reports are prioritized.
-</p>

@@ -67,10 +67,17 @@
 
 <h2>Limitation of liability</h2>
 <p>
-	To the fullest extent permitted by law, we are not liable for any indirect, incidental, special,
-	consequential, or punitive damages, or for loss of profits, revenue, data, or goodwill, arising
-	from or related to your use of the Service. Our total liability for any claim arising from the
-	Service is limited to one hundred U.S. dollars ($100).
+	To the fullest extent permitted by applicable law, we disclaim all liability arising from or
+	related to your use of the Service. This includes, without limitation, any direct, indirect,
+	incidental, special, consequential, exemplary, or punitive damages, and any loss of profits,
+	revenue, data, goodwill, or other intangible losses, whether based in contract, tort (including
+	negligence), strict liability, or any other legal theory, and whether or not we have been advised
+	of the possibility of such damages. You use the Service at your own risk.
+</p>
+<p>
+	Nothing in these terms excludes or limits liability that cannot be excluded or limited under
+	applicable law, including certain rights you may have under the British Columbia Business
+	Practices and Consumer Protection Act or similar statutes.
 </p>
 
 <h2>Third-party services</h2>

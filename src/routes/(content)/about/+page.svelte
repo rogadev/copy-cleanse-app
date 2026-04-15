@@ -13,12 +13,14 @@
 <h2>What it does</h2>
 <p>
 	Copy Cleanse removes the subtle formatting artifacts that large language models leave behind in
-	their output: zero-width spaces, non-breaking spaces, Unicode direction markers, curly quotes, em
-	dashes substituted for regular punctuation, and other invisible characters that make AI text
-	behave oddly when pasted into editors, CMSs, or messaging apps.
+	their output. It replaces smart quotes and curly apostrophes with plain ones, normalizes em and en
+	dashes, converts Unicode ellipses to three dots, strips invisible characters like zero-width
+	spaces and soft hyphens, replaces exotic whitespace with regular spaces, converts fullwidth Latin
+	characters back to standard ASCII, and removes AI-source tracking parameters (such as
+	<code>?source=chatgpt</code> or <code>utm_source=claude</code>) from URLs.
 </p>
 <p>
-	Paste text in, get clean text out. A diff view shows exactly what was removed so you can see what
+	Paste text in, get clean text out. A diff view shows exactly what was changed so you can see what
 	the model actually wrote versus how it chose to render it.
 </p>
 
@@ -35,21 +37,9 @@
 
 <h2>Who built it</h2>
 <p>
-	Copy Cleanse is maintained by Ryan Roga. It started as a personal utility — I kept pasting AI
-	drafts into my blog and finding invisible characters that broke layouts and search — and grew into
-	a public tool because other people were hitting the same thing.
+	Copy Cleanse is built and maintained by Ryan Roga. It is open source; contributions, issues, and
+	feature requests are welcome on <a href="https://github.com/rogadev/copy-cleanse">GitHub</a>.
 </p>
-
-<h2>Roadmap</h2>
-<p>The near-term focus is:</p>
-<ul>
-	<li>A browser extension so you can clean text in place without leaving the tab you're in.</li>
-	<li>A short-form guide explaining which characters LLMs insert and why.</li>
-	<li>
-		Configurable cleaning rules for users who want to keep certain characters (e.g. em dashes in
-		fiction).
-	</li>
-</ul>
 
 <h2>Get in touch</h2>
 <p>
