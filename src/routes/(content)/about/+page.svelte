@@ -35,10 +35,15 @@
 	<a href="https://github.com/rogadev/copy-cleanse">GitHub repository</a>.
 </p>
 
-<h2>Who built it</h2>
+<h2>Who built it and why</h2>
 <p>
-	Copy Cleanse is built and maintained by Ryan Roga. It is open source; contributions, issues, and
-	feature requests are welcome on <a href="https://github.com/rogadev/copy-cleanse">GitHub</a>.
+	Copy Cleanse is built and maintained by Ryan Roga. The idea was simple: strip the little
+	watermarks and fingerprints that AI tools leave behind in their output. What you see is what you
+	get — no agenda, no claims beyond the character-by-character transformations listed above.
+</p>
+<p>
+	The project is open source; contributions, issues, and feature requests are welcome on
+	<a href="https://github.com/rogadev/copy-cleanse">GitHub</a>.
 </p>
 
 <h2>Get in touch</h2>
