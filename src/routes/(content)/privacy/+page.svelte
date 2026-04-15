@@ -108,6 +108,6 @@
 <h2>Contact</h2>
 <p>
 	Questions about this policy can be directed to
-	<a href="mailto:privacy@copycleanse.com">privacy@copycleanse.com</a>
+	<a href="mailto:ryan@roga.dev?subject=Copy%20Cleanse%20privacy">ryan@roga.dev</a>
 	or through the <a href="/contact">contact page</a>.
 </p>

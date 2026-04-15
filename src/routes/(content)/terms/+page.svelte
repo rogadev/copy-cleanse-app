@@ -97,6 +97,6 @@
 <h2>Contact</h2>
 <p>
 	Questions about these terms can be directed to
-	<a href="mailto:legal@copycleanse.com">legal@copycleanse.com</a>
+	<a href="mailto:ryan@roga.dev?subject=Copy%20Cleanse%20terms">ryan@roga.dev</a>
 	or through the <a href="/contact">contact page</a>.
 </p>

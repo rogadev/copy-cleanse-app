@@ -21,14 +21,14 @@
 <h2>Security reports</h2>
 <p>
 	If you think you've found a security issue, please do not open a public issue. Email
-	<a href="mailto:security@copycleanse.com">security@copycleanse.com</a> with a description and, if applicable,
-	steps to reproduce.
+	<a href="mailto:ryan@roga.dev?subject=Copy%20Cleanse%20security">ryan@roga.dev</a> with a description
+	and, if applicable, steps to reproduce.
 </p>
 
 <h2>Everything else</h2>
 <p>
 	General inquiries, partnership questions, press: email
-	<a href="mailto:hello@copycleanse.com">hello@copycleanse.com</a>.
+	<a href="mailto:ryan@roga.dev">ryan@roga.dev</a>.
 </p>
 
 <h2>Response times</h2>
